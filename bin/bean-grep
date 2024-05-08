@@ -10,11 +10,12 @@ import re
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from beancount.core.data import Directive
+from beancount.core.data import Directive, Transaction
 from beancount.parser.printer import print_entry
 
 
 DEFAULT_LEDGER = "current.beancount"
+FAKE_TAGS_SEP = ","
 
 
 @dataclass
@@ -28,8 +29,35 @@ class Criteria:
     metadata: Optional[Any] = None  # TODO: filter on key/value metadata
     narration: Optional[re.Pattern] = None
     payee: Optional[re.Pattern] = None
-    tag: Optional[re.Pattern] = None  # TODO: filter on #accounts
+    tag: Optional[re.Pattern] = None
     type_: Optional[Any] = None  # TODO: filter on beancount entry types
+
+
+def get_all_tags(entry: Directive, fake_tags_key="tags") -> set[str]:
+    """Extract all tags from a beancount directive.
+
+    Returned tags include:
+
+    - Tags applied globally to the directive.
+
+    - Tags applied locally to a transaction posting, as comma-separated strings in the
+      value of the fake_tags_key metadata key. Passing fake_tags_key=None will disable
+      looking for these tags.
+
+    """
+    tags = []
+
+    if hasattr(entry, "tags"):
+        tags.extend(entry.tags)
+
+    if isinstance(entry, Transaction) and fake_tags_key is not None:
+        for posting in getattr(entry, "postings", []):
+            tags.extend(
+                tag.strip()
+                for tag in posting.meta.get(fake_tags_key, "").split(FAKE_TAGS_SEP)
+            )
+
+    return set(tags)
 
 
 def entry_matches(entry: Directive, criteria: Criteria) -> bool:
@@ -39,17 +67,41 @@ def entry_matches(entry: Directive, criteria: Criteria) -> bool:
     if criteria.narration:
         predicates.append(
             lambda e: (
-                getattr(e, "narration", None)
-                and re.search(criteria.narration, e.narration)
+                hasattr(e, "narration") and re.search(criteria.narration, e.narration)
             )
         )
     if criteria.payee:
         predicates.append(
-            lambda e: (getattr(e, "payee", None) and re.search(criteria.payee, e.payee))
+            lambda e: (hasattr(e, "payee") and re.search(criteria.payee, e.payee))
+        )
+    if criteria.tag:
+        predicates.append(
+            lambda e: (any(re.search(criteria.tag, t) for t in get_all_tags(e)))
         )
 
     is_match = all(p(entry) for p in predicates)
     return is_match
+
+
+def build_criteria(ignore_case, account_RE, narration_RE, payee_RE, tag_RE) -> Criteria:
+    """Build a Criteria object from command line arguments."""
+
+    re_flags = 0
+    if ignore_case:
+        re_flags = re.IGNORECASE
+
+    criteria = Criteria()
+
+    if account_RE is not None:
+        criteria.account = re.compile(account_RE, flags=re_flags)
+    if narration_RE is not None:
+        criteria.narration = re.compile(narration_RE, flags=re_flags)
+    if payee_RE is not None:
+        criteria.payee = re.compile(payee_RE, flags=re_flags)
+    if tag_RE is not None:
+        criteria.tag = re.compile(tag_RE, flags=re_flags)
+
+    return criteria
 
 
 @click.argument(
@@ -61,35 +113,41 @@ def entry_matches(entry: Directive, criteria: Criteria) -> bool:
     "ignore_case",
     default=False,
     show_default=True,
-    help="Ignore case distinctions",
+    help="Ignore case distinctions in string matches.",
+)
+@click.option(
+    "--account",
+    "-a",
+    "account_RE",
+    show_default=True,
+    help="Only return entries referencing accounts with names matching given regex.",
 )
 @click.option(
     "--narration",
     "-n",
     "narration_RE",
     show_default=True,
-    help="Narration filter (regex)",
+    help="Only return entries whose narrations match given regex.",
 )
 @click.option(
     "--payee",
     "-p",
     "payee_RE",
     show_default=True,
-    help="Payee filter (regex)",
+    help="Only return entries whose payees match given regex.",
+)
+@click.option(
+    "--tag",
+    "-t",
+    "tag_RE",
+    show_default=True,
+    help="Only return entries with at least one tag matching this regex. "
+    "The tag can be located anywhere.",
 )
 @click.command()
-def main(filename, ignore_case, narration_RE, payee_RE):
-    re_flags = 0
-    if ignore_case:
-        re_flags = re.IGNORECASE
-
-    criteria = Criteria()
-    if narration_RE is not None:
-        criteria.narration = re.compile(narration_RE, flags=re_flags)
-    if payee_RE is not None:
-        criteria.payee = re.compile(payee_RE, flags=re_flags)
-
+def main(filename, ignore_case, account_RE, narration_RE, payee_RE, tag_RE):
     ledger = beancount.loader.load_file(filename)
+    criteria = build_criteria(ignore_case, account_RE, narration_RE, payee_RE, tag_RE)
     for entry in ledger[0]:
         if entry_matches(entry, criteria):
             print_entry(entry)
