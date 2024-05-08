@@ -5,13 +5,13 @@
 
 import beancount.loader
 import click
+import logging
 import re
 
+from beancount.core import data
+from beancount.parser.printer import print_entry
 from dataclasses import dataclass
 from typing import Any, Optional
-
-from beancount.core.data import Directive, Transaction
-from beancount.parser.printer import print_entry
 
 
 DEFAULT_LEDGER = "current.beancount"
@@ -22,9 +22,9 @@ FAKE_TAGS_SEP = ","
 class Criteria:
     """Criteria to select matching beancount entries."""
 
-    account: Optional[re.Pattern] = None  # TODO: filter on account names
+    account: Optional[re.Pattern] = None
     amount: Optional[Any] = None  # TODO: filter on amounts
-    currency: Optional[Any] = None  # TODO: filter on currency
+    currency: Optional[Any] = None  # TODO: filter on currencies
     date: Optional[Any] = None  # TODO: filter on dates
     metadata: Optional[Any] = None  # TODO: filter on key/value metadata
     narration: Optional[re.Pattern] = None
@@ -33,8 +33,30 @@ class Criteria:
     type_: Optional[Any] = None  # TODO: filter on beancount entry types
 
 
-def get_all_tags(entry: Directive, fake_tags_key="tags") -> set[str]:
-    """Extract all tags from a beancount directive.
+def get_accounts(entry: data.Directive) -> set[str]:
+    """Extract account names referenced from a beancount directive.
+
+    - For transactions, return the name of all accounts in postings.
+
+    - For directives like open, close, etc. return the singleton name of the
+      referenced account.
+
+    """
+    accounts = []
+
+    match type(entry):
+        case (
+            data.Open | data.Close | data.Pad | data.Balance | data.Note | data.Document
+        ) if entry.account is not None:
+            accounts.append(entry.account)
+        case data.Transaction:
+            accounts.extend(p.account for p in entry.postings)
+
+    return set(accounts)
+
+
+def get_tags(entry: data.Directive, fake_tags_key="tags") -> set[str]:
+    """Extract all tags applied to a beancount directive.
 
     Returned tags include:
 
@@ -50,7 +72,7 @@ def get_all_tags(entry: Directive, fake_tags_key="tags") -> set[str]:
     if hasattr(entry, "tags"):
         tags.extend(entry.tags)
 
-    if isinstance(entry, Transaction) and fake_tags_key is not None:
+    if isinstance(entry, data.Transaction) and fake_tags_key is not None:
         for posting in getattr(entry, "postings", []):
             tags.extend(
                 tag.strip()
@@ -60,10 +82,14 @@ def get_all_tags(entry: Directive, fake_tags_key="tags") -> set[str]:
     return set(tags)
 
 
-def entry_matches(entry: Directive, criteria: Criteria) -> bool:
+def entry_matches(entry: data.Directive, criteria: Criteria) -> bool:
     """Check if a beancount entry matches stated criteria."""
 
     predicates = []
+    if criteria.account:
+        predicates.append(
+            lambda e: (any(re.search(criteria.account, a) for a in get_accounts(e)))
+        )
     if criteria.narration:
         predicates.append(
             lambda e: (
@@ -76,7 +102,7 @@ def entry_matches(entry: Directive, criteria: Criteria) -> bool:
         )
     if criteria.tag:
         predicates.append(
-            lambda e: (any(re.search(criteria.tag, t) for t in get_all_tags(e)))
+            lambda e: (any(re.search(criteria.tag, t) for t in get_tags(e)))
         )
 
     is_match = all(p(entry) for p in predicates)
@@ -146,8 +172,10 @@ def build_criteria(ignore_case, account_RE, narration_RE, payee_RE, tag_RE) -> C
 )
 @click.command()
 def main(filename, ignore_case, account_RE, narration_RE, payee_RE, tag_RE):
+    # logging.basicConfig(level=logging.DEBUG)  # XXX for debugging purposes
     ledger = beancount.loader.load_file(filename)
     criteria = build_criteria(ignore_case, account_RE, narration_RE, payee_RE, tag_RE)
+    logging.debug(f"Search pattern: {criteria}")
     for entry in ledger[0]:
         if entry_matches(entry, criteria):
             print_entry(entry)
