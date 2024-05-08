@@ -130,8 +130,38 @@ def build_criteria(ignore_case, account_RE, narration_RE, payee_RE, tag_RE) -> C
     return criteria
 
 
+@click.command()
 @click.argument(
     "filename", type=click.Path(exists=True, dir_okay=False), default=DEFAULT_LEDGER
+)
+@click.option(
+    "--account",
+    "-a",
+    "account_RE",
+    metavar="REGEX",
+    help="Only return entries referencing accounts with names matching given regex.",
+)
+@click.option(
+    "--narration",
+    "-n",
+    "narration_RE",
+    metavar="REGEX",
+    help="Only return entries whose narrations match given regex.",
+)
+@click.option(
+    "--payee",
+    "-p",
+    "payee_RE",
+    metavar="REGEX",
+    help="Only return entries whose payees match given regex.",
+)
+@click.option(
+    "--tag",
+    "-t",
+    "tag_RE",
+    metavar="REGEX",
+    help="Only return entries with at least one tag matching this regex. "
+    "The tag can be located anywhere.",
 )
 @click.option(
     "-i",
@@ -141,36 +171,6 @@ def build_criteria(ignore_case, account_RE, narration_RE, payee_RE, tag_RE) -> C
     show_default=True,
     help="Ignore case distinctions in string matches.",
 )
-@click.option(
-    "--account",
-    "-a",
-    "account_RE",
-    show_default=True,
-    help="Only return entries referencing accounts with names matching given regex.",
-)
-@click.option(
-    "--narration",
-    "-n",
-    "narration_RE",
-    show_default=True,
-    help="Only return entries whose narrations match given regex.",
-)
-@click.option(
-    "--payee",
-    "-p",
-    "payee_RE",
-    show_default=True,
-    help="Only return entries whose payees match given regex.",
-)
-@click.option(
-    "--tag",
-    "-t",
-    "tag_RE",
-    show_default=True,
-    help="Only return entries with at least one tag matching this regex. "
-    "The tag can be located anywhere.",
-)
-@click.command()
 def main(filename, ignore_case, account_RE, narration_RE, payee_RE, tag_RE):
     # logging.basicConfig(level=logging.DEBUG)  # XXX for debugging purposes
     ledger = beancount.loader.load_file(filename)
