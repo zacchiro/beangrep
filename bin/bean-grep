@@ -1,0 +1,99 @@
+#!/usr/bin/env python
+
+# SPDX-FileCopyrightText: 2024 Stefano Zacchiroli <zack@upsilon.cc>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+import beancount.loader
+import click
+import re
+
+from dataclasses import dataclass
+from typing import Any, Optional
+
+from beancount.core.data import Directive
+from beancount.parser.printer import print_entry
+
+
+DEFAULT_LEDGER = "current.beancount"
+
+
+@dataclass
+class Criteria:
+    """Criteria to select matching beancount entries."""
+
+    account: Optional[re.Pattern] = None  # TODO: filter on account names
+    amount: Optional[Any] = None  # TODO: filter on amounts
+    currency: Optional[Any] = None  # TODO: filter on currency
+    date: Optional[Any] = None  # TODO: filter on dates
+    metadata: Optional[Any] = None  # TODO: filter on key/value metadata
+    narration: Optional[re.Pattern] = None
+    payee: Optional[re.Pattern] = None
+    tag: Optional[re.Pattern] = None  # TODO: filter on #accounts
+    type_: Optional[Any] = None  # TODO: filter on beancount entry types
+
+
+def entry_matches(entry: Directive, criteria: Criteria) -> bool:
+    """Check if a beancount entry matches stated criteria."""
+
+    predicates = []
+    if criteria.narration:
+        predicates.append(
+            lambda e: (
+                getattr(e, "narration", None)
+                and re.search(criteria.narration, e.narration)
+            )
+        )
+    if criteria.payee:
+        predicates.append(
+            lambda e: (getattr(e, "payee", None) and re.search(criteria.payee, e.payee))
+        )
+
+    is_match = all(p(entry) for p in predicates)
+    return is_match
+
+
+@click.argument(
+    "filename", type=click.Path(exists=True, dir_okay=False), default=DEFAULT_LEDGER
+)
+@click.option(
+    "-i",
+    "--ignore-case/--no-ignore-case",
+    "ignore_case",
+    default=False,
+    show_default=True,
+    help="Ignore case distinctions",
+)
+@click.option(
+    "--narration",
+    "-n",
+    "narration_RE",
+    show_default=True,
+    help="Narration filter (regex)",
+)
+@click.option(
+    "--payee",
+    "-p",
+    "payee_RE",
+    show_default=True,
+    help="Payee filter (regex)",
+)
+@click.command()
+def main(filename, ignore_case, narration_RE, payee_RE):
+    re_flags = 0
+    if ignore_case:
+        re_flags = re.IGNORECASE
+
+    criteria = Criteria()
+    if narration_RE is not None:
+        criteria.narration = re.compile(narration_RE, flags=re_flags)
+    if payee_RE is not None:
+        criteria.payee = re.compile(payee_RE, flags=re_flags)
+
+    ledger = beancount.loader.load_file(filename)
+    for entry in ledger[0]:
+        if entry_matches(entry, criteria):
+            print_entry(entry)
+
+
+if __name__ == "__main__":
+    main()
