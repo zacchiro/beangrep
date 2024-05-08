@@ -16,6 +16,7 @@ from typing import Any, Optional
 
 DEFAULT_LEDGER = "current.beancount"
 FAKE_TAGS_SEP = ","
+KEY_VAL_SEP = ":"
 TYPE_SEP = "|"
 
 
@@ -27,7 +28,7 @@ class Criteria:
     amount: Optional[Any] = None  # TODO: filter on amounts
     currency: Optional[Any] = None  # TODO: filter on currencies
     date: Optional[Any] = None  # TODO: filter on dates
-    metadata: Optional[Any] = None  # TODO: filter on key/value metadata
+    metadata: Optional[tuple[re.Pattern, re.Pattern]] = None
     narration: Optional[re.Pattern] = None
     payee: Optional[re.Pattern] = None
     tag: Optional[re.Pattern] = None
@@ -83,6 +84,11 @@ def get_tags(entry: data.Directive, fake_tags_key="tags") -> set[str]:
     return set(tags)
 
 
+def get_metadata(entry: data.Directive) -> set[tuple[str, str]]:
+    """Extract all key/value metadata pairs attached to a beancount directive."""
+    raise NotImplementedError("metadata extraction")
+
+
 def entry_matches(entry: data.Directive, criteria: Criteria) -> bool:
     """Check if a beancount entry matches stated criteria."""
 
@@ -90,6 +96,14 @@ def entry_matches(entry: data.Directive, criteria: Criteria) -> bool:
     if criteria.account:
         predicates.append(
             lambda e: (any(re.search(criteria.account, a) for a in get_accounts(e)))
+        )
+    if criteria.metadata:
+        (key_re, val_re) = criteria.metadata
+        predicates.append(
+            lambda e: any(
+                re.search(key_re, k) and re.search(val_re, v)
+                for (k, v) in get_metadata(e)
+            )
         )
     if criteria.narration:
         predicates.append(
@@ -148,7 +162,7 @@ def parse_types(types_pat: str) -> set[type]:
             case "custom":
                 types.append(data.Custom)
             case _:
-                raise ValueError(f"unknown directive type {s}")
+                raise ValueError(f'unknown directive type "{s}"')
 
     if types_pat == "all":
         types.extend(
@@ -175,7 +189,7 @@ def parse_types(types_pat: str) -> set[type]:
 
 
 def _build_criteria(
-    ignore_case, account_RE, narration_RE, payee_RE, tag_RE, type_pat
+    ignore_case, account_re, narration_re, metadata_pat, payee_re, tag_re, type_pat
 ) -> Criteria:
     """Build a Criteria object from command line arguments."""
 
@@ -183,16 +197,27 @@ def _build_criteria(
     if ignore_case:
         re_flags = re.IGNORECASE
 
+    def re_compile(s):
+        return re.compile(s, flags=re_flags)
+
     criteria = Criteria()
 
-    if account_RE is not None:
-        criteria.account = re.compile(account_RE, flags=re_flags)
-    if narration_RE is not None:
-        criteria.narration = re.compile(narration_RE, flags=re_flags)
-    if payee_RE is not None:
-        criteria.payee = re.compile(payee_RE, flags=re_flags)
-    if tag_RE is not None:
-        criteria.tag = re.compile(tag_RE, flags=re_flags)
+    if account_re is not None:
+        criteria.account = re_compile(account_re)
+    if metadata_pat is not None:
+        if KEY_VAL_SEP not in metadata_pat:
+            raise ValueError(
+                f'invalid metadata pattern "{metadata_pat}" '
+                f"(does not contain key/value separator '{KEY_VAL_SEP}')"
+            )
+        (key_re, val_re) = metadata_pat.split(KEY_VAL_SEP, maxsplit=1)
+        criteria.metadata = (re_compile(key_re), re_compile(val_re))
+    if narration_re is not None:
+        criteria.narration = re_compile(narration_re)
+    if payee_re is not None:
+        criteria.payee = re_compile(payee_re)
+    if tag_re is not None:
+        criteria.tag = re_compile(tag_re)
     if type_pat is not None:
         criteria.types = parse_types(type_pat)
 
@@ -206,30 +231,39 @@ def _build_criteria(
 @click.option(
     "--account",
     "-a",
-    "account_RE",
+    "account_re",
     metavar="REGEX",
     help="Only return entries referencing accounts with names matching given regex.",
 )
 @click.option(
+    "--meta",
+    "-m",
+    "metadata_pat",
+    metavar="KEY_reGEX:VAL_reGEX",
+    help="Only return entries with at least one metadata key/value pair matching "
+    "given pattern. A pattern is a pair of regular expression separated by ':', "
+    "the former matching on metadata key, the latter on metadata value.",
+)
+@click.option(
     "--narration",
     "-n",
-    "narration_RE",
+    "narration_re",
     metavar="REGEX",
     help="Only return entries whose narrations match given regex.",
 )
 @click.option(
     "--payee",
     "-p",
-    "payee_RE",
+    "payee_re",
     metavar="REGEX",
     help="Only return entries whose payees match given regex.",
 )
 @click.option(
     "--tag",
     "-t",
-    "tag_RE",
+    "tag_re",
     metavar="REGEX",
-    help="Only return entries with at least one tag matching this regex. "
+    help="Only return entries with at least one tag matching given regex. "
     "The tag can be located anywhere.",
 )
 @click.option(
@@ -253,12 +287,30 @@ def _build_criteria(
     show_default=True,
     help="Ignore case distinctions in string matches.",
 )
-def main(filename, ignore_case, account_RE, narration_RE, payee_RE, tag_RE, type_pat):
+def main(
+    filename,
+    ignore_case,
+    account_re,
+    narration_re,
+    metadata_pat,
+    payee_re,
+    tag_re,
+    type_pat,
+):
     # logging.basicConfig(level=logging.DEBUG)  # XXX for debugging purposes
     ledger = beancount.loader.load_file(filename)
-    criteria = _build_criteria(
-        ignore_case, account_RE, narration_RE, payee_RE, tag_RE, type_pat
-    )
+    try:
+        criteria = _build_criteria(
+            ignore_case,
+            account_re,
+            narration_re,
+            metadata_pat,
+            payee_re,
+            tag_re,
+            type_pat,
+        )
+    except ValueError as e:
+        raise click.UsageError(e.args[0]) from e
     logging.debug(f"Search pattern: {criteria}")
     for entry in ledger[0]:
         if entry_matches(entry, criteria):
