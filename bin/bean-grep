@@ -17,11 +17,12 @@ from typing import Any, Optional
 
 # TODO add unit tests
 
+# TODO add support for reading from stdin, either implicitly or passing "-"
 DEFAULT_LEDGER = "current.beancount"
 
 POSTING_TAGS_SEP = ","
 KEY_VAL_SEP = ":"
-POSTING_TAGS_META = "tags"  # TODO make this overridable with a CLI flag
+POSTING_TAGS_META = "tags"
 TYPE_SEP = "|"
 
 
@@ -64,6 +65,22 @@ class RelOp(Enum):
                 return lhs <= rhs
             case self.GEQ.value:
                 return lhs >= rhs
+
+    @classmethod
+    def parse(cls, s: str):
+        match s:
+            case "=":
+                return cls.EQ
+            case "<":
+                return cls.LT
+            case ">":
+                return cls.GT
+            case "<=":
+                return cls.LEQ
+            case ">=":
+                return RelOp.GEQ
+            case _:
+                raise ValueError(f'invalid comparison operator "{s}"')
 
 
 @dataclass
@@ -211,26 +228,10 @@ def parse_date_pred(date_pred: str) -> DatePredicate:
     if not m:
         raise ValueError(f'invalid date predicate "{date_pred}"')
 
-    def parse_relop(s: str) -> RelOp:
-        # TODO move this to a @classmethod on RelOp
-        match s:
-            case "=":
-                return RelOp.EQ
-            case "<":
-                return RelOp.LT
-            case ">":
-                return RelOp.GT
-            case "<=":
-                return RelOp.LEQ
-            case ">=":
-                return RelOp.GEQ
-            case _:
-                raise ValueError(f'invalid comparison operator "{s}"')
-
     # remove None matches to avoid overriding DatePredicate defaults below
     matches = dict((k, v) for (k, v) in m.groupdict().items() if v is not None)
     if "comp" in matches:
-        matches["comp"] = parse_relop(matches["comp"])
+        matches["comp"] = RelOp.parse(matches["comp"])
     for k in ("year", "month", "day"):
         if k in matches:
             matches[k] = int(matches[k])
