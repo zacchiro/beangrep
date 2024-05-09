@@ -32,7 +32,7 @@ class Criteria:
 
     account: Optional[re.Pattern] = None
     amount: Optional[Any] = None  # TODO: filter on amounts/currencies
-    date: Optional[Any] = None  # TODO: filter on dates
+    date: Optional[Any] = None
     metadata: Optional[tuple[re.Pattern, re.Pattern]] = None
     narration: Optional[re.Pattern] = None
     payee: Optional[re.Pattern] = None
@@ -162,6 +162,8 @@ def entry_matches(entry: data.Directive, criteria: Criteria) -> bool:
         predicates.append(
             lambda e: (any(re.search(criteria.account, a) for a in get_accounts(e)))
         )
+    if criteria.date:
+        raise NotImplementedError("date filtering")
     if criteria.metadata:
         (key_re, val_re) = criteria.metadata
         predicates.append(
@@ -189,6 +191,43 @@ def entry_matches(entry: data.Directive, criteria: Criteria) -> bool:
 
     is_match = all(p(entry) for p in predicates)
     return is_match
+
+
+# regular expression used to parse date predicates
+DATE_PRED_RE = re.compile(
+    r"^(?P<comp><|<=|=|>|>=)?(?P<year>\d{4})(-(?P<month>\d{2})(-(?P<day>\d{2}))?)?$"
+)
+
+
+def parse_date_pred(date_pred: str) -> DatePredicate:
+    """Parse a date predicate from string."""
+
+    m = DATE_PRED_RE.match(date_pred)
+    if not m:
+        raise ValueError(f'invalid date predicate "{date_pred}"')
+
+    def parse_relop(s: str) -> RelOp:
+        # TODO move this to a @classmethod on RelOp
+        match s:
+            case "=":
+                return RelOp.EQ
+            case "<":
+                return RelOp.LT
+            case ">":
+                return RelOp.GT
+            case "<=":
+                return RelOp.LEQ
+            case ">=":
+                return RelOp.GEQ
+            case _:
+                raise ValueError(f'invalid comparison operator "{s}"')
+
+    # remove None matches to avoid overriding DatePredicate defaults below
+    matches = dict((k, v) for (k, v) in m.groupdict().items() if v is not None)
+    if "comp" in matches:
+        matches["comp"] = parse_relop(matches["comp"])
+
+    return DatePredicate(**matches)
 
 
 def parse_types(types_pat: str) -> set[type]:
@@ -256,7 +295,7 @@ def parse_types(types_pat: str) -> set[type]:
 def _build_criteria(
     ignore_case,
     account_re,
-    date_expr,
+    date_preds,
     narration_re,
     metadata_pat,
     payee_re,
@@ -276,6 +315,8 @@ def _build_criteria(
 
     if account_re is not None:
         criteria.account = re_compile(account_re)
+    if date_preds is not None:
+        criteria.date = list(map(parse_date_pred, date_preds))
     if metadata_pat is not None:
         if KEY_VAL_SEP not in metadata_pat:
             raise ValueError(
@@ -310,7 +351,7 @@ def _build_criteria(
 @click.option(
     "--date",
     "-d",
-    "date_expr",
+    "date_preds",
     metavar="[OP]DATE",
     multiple=True,
     help="Only return entries with dates matching the given date predicate. "
@@ -375,7 +416,7 @@ def main(
     filename,
     ignore_case,
     account_re,
-    date_expr,
+    date_preds,
     narration_re,
     metadata_pat,
     payee_re,
@@ -389,7 +430,7 @@ def main(
         criteria = _build_criteria(
             ignore_case=ignore_case,
             account_re=account_re,
-            date_expr=date_expr,
+            date_preds=date_preds,
             narration_re=narration_re,
             metadata_pat=metadata_pat,
             payee_re=payee_re,
