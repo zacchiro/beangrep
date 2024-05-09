@@ -26,20 +26,6 @@ POSTING_TAGS_META = "tags"
 TYPE_SEP = "|"
 
 
-@dataclass
-class Criteria:
-    """Criteria to select matching beancount entries."""
-
-    account: Optional[re.Pattern] = None
-    amount: Optional[Any] = None  # TODO: filter on amounts/currencies
-    date: Optional[Any] = None
-    metadata: Optional[tuple[re.Pattern, re.Pattern]] = None
-    narration: Optional[re.Pattern] = None
-    payee: Optional[re.Pattern] = None
-    tag: Optional[re.Pattern] = None
-    types: Optional[set[type]] = None
-
-
 class RelOp(Enum):
     """Relational comparison operator."""
 
@@ -103,6 +89,20 @@ class DatePredicate:
             is_match = is_match and self.comp.eval(date.day, self.day)
 
         return is_match
+
+
+@dataclass
+class Criteria:
+    """Criteria to select matching beancount entries."""
+
+    account: Optional[re.Pattern] = None
+    amount: Optional[Any] = None  # TODO: filter on amounts/currencies
+    date: Optional[list[DatePredicate]] = None
+    metadata: Optional[tuple[re.Pattern, re.Pattern]] = None
+    narration: Optional[re.Pattern] = None
+    payee: Optional[re.Pattern] = None
+    tag: Optional[re.Pattern] = None
+    types: Optional[set[type]] = None
 
 
 def get_accounts(entry: data.Directive) -> set[str]:
