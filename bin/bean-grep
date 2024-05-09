@@ -19,10 +19,9 @@ from typing import Any, Optional
 
 DEFAULT_LEDGER = "current.beancount"
 
-# TODO make the following defaults overridable with flags
 POSTING_TAGS_SEP = ","
 KEY_VAL_SEP = ":"
-POSTING_TAGS_META = "tags"
+POSTING_TAGS_META = "tags"  # TODO make this overridable with a CLI flag
 TYPE_SEP = "|"
 
 
@@ -154,7 +153,9 @@ def get_tags(entry: data.Directive, posting_tags_meta=POSTING_TAGS_META) -> set[
     return set(tags)
 
 
-def entry_matches(entry: data.Directive, criteria: Criteria) -> bool:
+def entry_matches(
+    entry: data.Directive, criteria: Criteria, posting_tags_meta=POSTING_TAGS_META
+) -> bool:
     """Check if a beancount entry matches stated criteria."""
 
     predicates = []
@@ -186,7 +187,9 @@ def entry_matches(entry: data.Directive, criteria: Criteria) -> bool:
         )
     if criteria.tag:
         predicates.append(
-            lambda e: (any(re.search(criteria.tag, t) for t in get_tags(e)))
+            lambda e: (
+                any(re.search(criteria.tag, t) for t in get_tags(e, posting_tags_meta))
+            )
         )
     if criteria.types:
         predicates.append(lambda e: type(e) in criteria.types)
@@ -298,7 +301,6 @@ def parse_types(types_pat: str) -> set[type]:
 
 
 def _build_criteria(
-    ignore_case,
     account_re,
     date_preds,
     narration_re,
@@ -306,6 +308,7 @@ def _build_criteria(
     payee_re,
     tag_re,
     type_pat,
+    ignore_case,
 ) -> Criteria:
     """Build a Criteria object from command line arguments."""
 
@@ -417,9 +420,14 @@ def _build_criteria(
     show_default=True,
     help="Ignore case distinctions in string matches.",
 )
+@click.option(
+    "--posting-tags-meta",
+    default=POSTING_TAGS_META,
+    show_default=True,
+    help="Metadata key used to attach tags to transaction postings.",
+)
 def main(
     filename,
-    ignore_case,
     account_re,
     date_preds,
     narration_re,
@@ -427,13 +435,14 @@ def main(
     payee_re,
     tag_re,
     type_pat,
+    ignore_case,
+    posting_tags_meta,
 ):
     # TODO make logging configurable via -v/--verbose
     # logging.basicConfig(level=logging.DEBUG)  # XXX for debugging purposes
     ledger = beancount.loader.load_file(filename)
     try:
         criteria = _build_criteria(
-            ignore_case=ignore_case,
             account_re=account_re,
             date_preds=date_preds,
             narration_re=narration_re,
@@ -441,12 +450,13 @@ def main(
             payee_re=payee_re,
             tag_re=tag_re,
             type_pat=type_pat,
+            ignore_case=ignore_case,
         )
     except ValueError as e:
         raise click.UsageError(e.args[0]) from e
     logging.debug(f"Search pattern: {criteria}")
     for entry in ledger[0]:
-        if entry_matches(entry, criteria):
+        if entry_matches(entry, criteria, posting_tags_meta):
             print_entry(entry)
 
 
