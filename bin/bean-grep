@@ -57,6 +57,22 @@ def get_accounts(entry: data.Directive) -> set[str]:
     return set(accounts)
 
 
+def get_metadata(entry: data.Directive) -> set[tuple[str, str]]:
+    """Extract all key/value metadata pairs attached to a beancount directive."""
+
+    metadata = list(getattr(entry, "meta", {}).items())
+
+    if isinstance(entry, data.Transaction):
+        for posting in entry.postings:
+            metadata.extend(getattr(posting, "meta", {}).items())
+
+    # Remove metadata with dunder keys (e.g., __tolerances__) as they contain unhashable
+    # values, and impossible to properly filter anyway.
+    metadata = set((k, v) for (k, v) in metadata if not k.startswith("__"))
+
+    return metadata
+
+
 def get_tags(entry: data.Directive, fake_tags_key="tags") -> set[str]:
     """Extract all tags applied to a beancount directive.
 
@@ -82,11 +98,6 @@ def get_tags(entry: data.Directive, fake_tags_key="tags") -> set[str]:
             )
 
     return set(tags)
-
-
-def get_metadata(entry: data.Directive) -> set[tuple[str, str]]:
-    """Extract all key/value metadata pairs attached to a beancount directive."""
-    raise NotImplementedError("metadata extraction")
 
 
 def entry_matches(entry: data.Directive, criteria: Criteria) -> bool:
