@@ -9,11 +9,13 @@ import logging
 import re
 
 from beancount.core import data
+from beancount.core.amount import Amount
 from beancount.parser.printer import print_entry
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum
-from typing import Any, Optional
+from typing import Optional
 
 # TODO add unit tests
 
@@ -70,6 +72,19 @@ class RelOp(Enum):
 
 
 @dataclass
+class AmountPredicate:
+    """Predicate on amounts, filtering on number/currency."""
+
+    comp: RelOp = RelOp.EQ
+    number: Optional[Decimal] = None
+    currency: Optional[int] = None
+
+    def match(self, amount: Amount) -> bool:
+        """Test if an amount matches the amount predicate."""
+        raise NotImplementedError("AmountPredicate.match()")  # TODO
+
+
+@dataclass
 class DatePredicate:
     """Predicate on dates, filtering on year/month/day."""
 
@@ -96,7 +111,7 @@ class Criteria:
     """Criteria to select matching beancount entries."""
 
     account: Optional[re.Pattern] = None
-    amount: Optional[Any] = None  # TODO: filter on amounts/currencies
+    amount: Optional[list[AmountPredicate]] = None
     date: Optional[list[DatePredicate]] = None
     metadata: Optional[tuple[re.Pattern, re.Pattern]] = None
     narration: Optional[re.Pattern] = None
@@ -215,12 +230,20 @@ def entry_matches(
     return is_match
 
 
+# TODO move to a class method of AmountPredicate
+def parse_amount_pred(amount_pred: str) -> AmountPredicate:
+    """Parse an amount predicate from string."""
+    raise NotImplementedError("parse_amount_pred()")  # TODO
+
+
+# TODO move to a class attribute of DatePredicate
 # regular expression used to parse date predicates
 DATE_PRED_RE = re.compile(
     r"^(?P<comp><|<=|=|>|>=)?(?P<year>\d{4})(-(?P<month>\d{2})(-(?P<day>\d{2}))?)?$"
 )
 
 
+# TODO move to a class method of DatePredicate
 def parse_date_pred(date_pred: str) -> DatePredicate:
     """Parse a date predicate from string."""
 
@@ -301,6 +324,7 @@ def parse_types(types_pat: str) -> set[type]:
 
 def _build_criteria(
     account_re,
+    amount_preds,
     date_preds,
     narration_re,
     metadata_pat,
@@ -322,6 +346,8 @@ def _build_criteria(
 
     if account_re is not None:
         criteria.account = re_compile(account_re)
+    if amount_preds is not None:
+        criteria.amount = list(map(parse_amount_pred, amount_preds))
     if date_preds is not None:
         criteria.date = list(map(parse_date_pred, date_preds))
     if metadata_pat is not None:
@@ -364,6 +390,19 @@ def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
     "account_re",
     metavar="REGEX",
     help="Only return entries referencing accounts with names matching given regex.",
+)
+@click.option(
+    "--amount",
+    "-A",
+    "amount_preds",
+    metavar="[OP]AMOUNT [REGEX]",
+    multiple=True,
+    help="Only return entries with amounts matching the given amount predicate. "
+    "An amount predicate start with an optional comparison operator "
+    "(one of '<', '<=', '=', '>=', '>', with '=' being the default), "
+    "followed by a decimal number (using '.' as decimal separator), "
+    "followed by an optional currency regex. "
+    "Multiple amount predicates can be given to express complex amount ranges.",
 )
 @click.option(
     "--date",
@@ -448,6 +487,7 @@ def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
 def main(
     filename,
     account_re,
+    amount_preds,
     date_preds,
     narration_re,
     metadata_pat,
@@ -471,6 +511,7 @@ def main(
     try:
         criteria = _build_criteria(
             account_re=account_re,
+            amount_preds=amount_preds,
             date_preds=date_preds,
             narration_re=narration_re,
             metadata_pat=metadata_pat,
