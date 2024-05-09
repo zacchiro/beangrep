@@ -15,8 +15,11 @@ from typing import Any, Optional
 
 
 DEFAULT_LEDGER = "current.beancount"
-FAKE_TAGS_SEP = ","
+
+# TODO make the following defaults overridable with flags
+POSTING_TAGS_SEP = ","
 KEY_VAL_SEP = ":"
+POSTING_TAGS_META = "tags"
 TYPE_SEP = "|"
 
 
@@ -73,7 +76,7 @@ def get_metadata(entry: data.Directive) -> set[tuple[str, str]]:
     return metadata
 
 
-def get_tags(entry: data.Directive, fake_tags_key="tags") -> set[str]:
+def get_tags(entry: data.Directive, posting_tags_meta=POSTING_TAGS_META) -> set[str]:
     """Extract all tags applied to a beancount directive.
 
     Returned tags include:
@@ -81,8 +84,8 @@ def get_tags(entry: data.Directive, fake_tags_key="tags") -> set[str]:
     - Tags applied globally to the directive.
 
     - Tags applied locally to a transaction posting, as comma-separated strings in the
-      value of the fake_tags_key metadata key. Passing fake_tags_key=None will disable
-      looking for these tags.
+      value of the posting_tags_meta metadata key. Passing posting_tags_meta=None will
+      disable looking for these tags.
 
     """
     tags = []
@@ -90,11 +93,13 @@ def get_tags(entry: data.Directive, fake_tags_key="tags") -> set[str]:
     if hasattr(entry, "tags"):
         tags.extend(entry.tags)
 
-    if isinstance(entry, data.Transaction) and fake_tags_key is not None:
+    if isinstance(entry, data.Transaction) and posting_tags_meta is not None:
         for posting in getattr(entry, "postings", []):
             tags.extend(
                 tag.strip()
-                for tag in posting.meta.get(fake_tags_key, "").split(FAKE_TAGS_SEP)
+                for tag in posting.meta.get(posting_tags_meta, "").split(
+                    POSTING_TAGS_SEP
+                )
             )
 
     return set(tags)
@@ -250,7 +255,7 @@ def _build_criteria(
     "--meta",
     "-m",
     "metadata_pat",
-    metavar="KEY_reGEX:VAL_reGEX",
+    metavar="REGEX:REGEX",
     help="Only return entries with at least one metadata key/value pair matching "
     "given pattern. A pattern is a pair of regular expression separated by ':', "
     "the former matching on metadata key, the latter on metadata value.",
