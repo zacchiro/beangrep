@@ -13,6 +13,7 @@ from beancount.parser.printer import print_entry
 from dataclasses import dataclass
 from typing import Any, Optional
 
+# TODO add unit tests
 
 DEFAULT_LEDGER = "current.beancount"
 
@@ -205,7 +206,14 @@ def parse_types(types_pat: str) -> set[type]:
 
 
 def _build_criteria(
-    ignore_case, account_re, narration_re, metadata_pat, payee_re, tag_re, type_pat
+    ignore_case,
+    account_re,
+    date_expr,
+    narration_re,
+    metadata_pat,
+    payee_re,
+    tag_re,
+    type_pat,
 ) -> Criteria:
     """Build a Criteria object from command line arguments."""
 
@@ -250,6 +258,18 @@ def _build_criteria(
     "account_re",
     metavar="REGEX",
     help="Only return entries referencing accounts with names matching given regex.",
+)
+@click.option(
+    "--date",
+    "-d",
+    "date_expr",
+    metavar="[OP]DATE",
+    multiple=True,
+    help="Only return entries with dates matching the given date predicate. "
+    "A date predicate start with an optional comparison operator "
+    "(one of '<', '=', '>', with '=' being the default), "
+    "and is followed by a date in the form YYYY-[MM[-DD]]. "
+    "Multiple date predicates can be given to express complex date ranges.",
 )
 @click.option(
     "--meta",
@@ -307,6 +327,7 @@ def main(
     filename,
     ignore_case,
     account_re,
+    date_expr,
     narration_re,
     metadata_pat,
     payee_re,
@@ -317,13 +338,14 @@ def main(
     ledger = beancount.loader.load_file(filename)
     try:
         criteria = _build_criteria(
-            ignore_case,
-            account_re,
-            narration_re,
-            metadata_pat,
-            payee_re,
-            tag_re,
-            type_pat,
+            ignore_case=ignore_case,
+            account_re=account_re,
+            date_expr=date_expr,
+            narration_re=narration_re,
+            metadata_pat=metadata_pat,
+            payee_re=payee_re,
+            tag_re=tag_re,
+            type_pat=type_pat,
         )
     except ValueError as e:
         raise click.UsageError(e.args[0]) from e
