@@ -377,7 +377,8 @@ def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
     "Multiple date predicates can be given to express complex date ranges.",
 )
 @click.option(
-    "--meta",  # TODO add "--metadata" as an alias for this
+    "--meta",
+    "--metadata",
     "-m",
     "metadata_pat",
     metavar="REGEX:REGEX",
