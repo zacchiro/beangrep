@@ -163,7 +163,9 @@ def entry_matches(entry: data.Directive, criteria: Criteria) -> bool:
             lambda e: (any(re.search(criteria.account, a) for a in get_accounts(e)))
         )
     if criteria.date:
-        raise NotImplementedError("date filtering")
+        predicates.append(
+            lambda e: (all(date_pred.match(e.date) for date_pred in criteria.date))
+        )
     if criteria.metadata:
         (key_re, val_re) = criteria.metadata
         predicates.append(
@@ -226,6 +228,9 @@ def parse_date_pred(date_pred: str) -> DatePredicate:
     matches = dict((k, v) for (k, v) in m.groupdict().items() if v is not None)
     if "comp" in matches:
         matches["comp"] = parse_relop(matches["comp"])
+    for k in ("year", "month", "day"):
+        if k in matches:
+            matches[k] = int(matches[k])
 
     return DatePredicate(**matches)
 
