@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Optional
+from typing import Optional, Self
 
 # TODO add unit tests
 # TODO make code mypy clean
@@ -55,7 +55,7 @@ class RelOp(Enum):
                 return lhs >= rhs
 
     @classmethod
-    def parse(cls, s: str):
+    def parse(cls, s: str) -> Self:
         match s:
             case "=":
                 return cls.EQ
@@ -79,13 +79,6 @@ class AmountPredicate:
     number: Optional[Decimal] = None
     currency: Optional[re.Pattern] = None
 
-    # regular expression used to parse amount predicates
-    SYNTAX_RE = re.compile(
-        r"^(?P<comp><|<=|=|>|>=)?"
-        r"(?P<number>-?\d+(\.\d+)?)"
-        r"(\s+(?P<currency>[A-Z][A-Z\._\-]*))?$"
-    )
-
     def match(self, amount: Amount) -> bool:
         """Test if an amount matches the amount predicate."""
         is_match = True
@@ -96,6 +89,30 @@ class AmountPredicate:
 
         return is_match
 
+    # regular expression used to parse amount predicates
+    SYNTAX_RE = re.compile(
+        r"^(?P<comp><|<=|=|>|>=)?"
+        r"(?P<number>-?\d+(\.\d+)?)"
+        r"(\s+(?P<currency>[A-Z][A-Z\._\-]*))?$"
+    )
+
+    @classmethod
+    def parse(cls, s: str) -> Self:
+        """Parse an amount predicate from string."""
+
+        m = cls.SYNTAX_RE.match(s)
+        if not m:
+            raise ValueError(f'invalid amount predicate "{s}"')
+
+        # remove None matches to avoid overriding AmountPredicate defaults below
+        matches = dict((k, v) for (k, v) in m.groupdict().items() if v is not None)
+        if "comp" in matches:
+            matches["comp"] = RelOp.parse(matches["comp"])
+        if "number" in matches:
+            matches["number"] = Decimal(matches["number"])
+
+        return cls(**matches)
+
 
 @dataclass
 class DatePredicate:
@@ -105,11 +122,6 @@ class DatePredicate:
     year: Optional[int] = None
     month: Optional[int] = None
     day: Optional[int] = None
-
-    # regular expression used to parse date predicates
-    SYNTAX_RE = re.compile(
-        r"^(?P<comp><|<=|=|>|>=)?(?P<year>\d{4})(-(?P<month>\d{2})(-(?P<day>\d{2}))?)?$"
-    )
 
     def match(self, date: datetime) -> bool:
         """Test if a date matches the date predicate."""
@@ -122,6 +134,28 @@ class DatePredicate:
             is_match = is_match and self.comp.eval(date.day, self.day)
 
         return is_match
+
+    # regular expression used to parse date predicates
+    SYNTAX_RE = re.compile(
+        r"^(?P<comp><|<=|=|>|>=)?(?P<year>\d{4})(-(?P<month>\d{2})(-(?P<day>\d{2}))?)?$"
+    )
+
+    @classmethod
+    def parse(cls, s: str) -> Self:
+        """Parse a date predicate from string."""
+        m = cls.SYNTAX_RE.match(s)
+        if not m:
+            raise ValueError(f'invalid date predicate "{s}"')
+
+        # remove None matches to avoid overriding DatePredicate defaults below
+        matches = dict((k, v) for (k, v) in m.groupdict().items() if v is not None)
+        if "comp" in matches:
+            matches["comp"] = RelOp.parse(matches["comp"])
+        for k in ("year", "month", "day"):
+            if k in matches:
+                matches[k] = int(matches[k])
+
+        return cls(**matches)
 
 
 @dataclass
@@ -278,43 +312,6 @@ def entry_matches(
     return is_match
 
 
-# TODO move to a class method of AmountPredicate
-def parse_amount_pred(s: str) -> AmountPredicate:
-    """Parse an amount predicate from string."""
-
-    m = AmountPredicate.SYNTAX_RE.match(s)
-    if not m:
-        raise ValueError(f'invalid amount predicate "{s}"')
-
-    # remove None matches to avoid overriding AmountPredicate defaults below
-    matches = dict((k, v) for (k, v) in m.groupdict().items() if v is not None)
-    if "comp" in matches:
-        matches["comp"] = RelOp.parse(matches["comp"])
-    if "number" in matches:
-        matches["number"] = Decimal(matches["number"])
-
-    return AmountPredicate(**matches)
-
-
-# TODO move to a class method of DatePredicate
-def parse_date_pred(s: str) -> DatePredicate:
-    """Parse a date predicate from string."""
-
-    m = DatePredicate.SYNTAX_RE.match(s)
-    if not m:
-        raise ValueError(f'invalid date predicate "{s}"')
-
-    # remove None matches to avoid overriding DatePredicate defaults below
-    matches = dict((k, v) for (k, v) in m.groupdict().items() if v is not None)
-    if "comp" in matches:
-        matches["comp"] = RelOp.parse(matches["comp"])
-    for k in ("year", "month", "day"):
-        if k in matches:
-            matches[k] = int(matches[k])
-
-    return DatePredicate(**matches)
-
-
 def parse_types(types_pat: str) -> set[type]:
     """Parse a directive type pattern.
 
@@ -400,9 +397,9 @@ def _build_criteria(
     if account_re is not None:
         criteria.account = re_compile(account_re)
     if amount_preds is not None:
-        criteria.amount = list(map(parse_amount_pred, amount_preds))
+        criteria.amount = list(map(AmountPredicate.parse, amount_preds))
     if date_preds is not None:
-        criteria.date = list(map(parse_date_pred, date_preds))
+        criteria.date = list(map(DatePredicate.parse, date_preds))
     if metadata_pat is not None:
         if KEY_VAL_SEP not in metadata_pat:
             raise ValueError(
