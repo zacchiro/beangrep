@@ -18,8 +18,8 @@ from enum import Enum
 from typing import Optional
 
 # TODO add unit tests
+# TODO make code mypy clean
 
-# TODO add support for reading from stdin, either implicitly or passing "-"
 DEFAULT_LEDGER = "current.beancount"
 
 POSTING_TAGS_SEP = ","
@@ -77,11 +77,24 @@ class AmountPredicate:
 
     comp: RelOp = RelOp.EQ
     number: Optional[Decimal] = None
-    currency: Optional[int] = None
+    currency: Optional[re.Pattern] = None
+
+    # regular expression used to parse amount predicates
+    SYNTAX_RE = re.compile(
+        r"^(?P<comp><|<=|=|>|>=)?"
+        r"(?P<number>-?\d+(\.\d+)?)"
+        r"(\s+(?P<currency>[A-Z][A-Z\._\-]*))?$"
+    )
 
     def match(self, amount: Amount) -> bool:
         """Test if an amount matches the amount predicate."""
-        raise NotImplementedError("AmountPredicate.match()")  # TODO
+        is_match = True
+        if is_match and self.number is not None:
+            is_match = is_match and self.comp.eval(amount.number, self.number)
+        if is_match and self.currency is not None:
+            is_match = is_match and self.currency.match(amount.currency)
+
+        return is_match
 
 
 @dataclass
@@ -92,6 +105,11 @@ class DatePredicate:
     year: Optional[int] = None
     month: Optional[int] = None
     day: Optional[int] = None
+
+    # regular expression used to parse date predicates
+    SYNTAX_RE = re.compile(
+        r"^(?P<comp><|<=|=|>|>=)?(?P<year>\d{4})(-(?P<month>\d{2})(-(?P<day>\d{2}))?)?$"
+    )
 
     def match(self, date: datetime) -> bool:
         """Test if a date matches the date predicate."""
@@ -108,7 +126,7 @@ class DatePredicate:
 
 @dataclass
 class Criteria:
-    """Criteria to select matching beancount entries."""
+    """Criteria to select matching Beancount entries."""
 
     account: Optional[re.Pattern] = None
     amount: Optional[list[AmountPredicate]] = None
@@ -121,7 +139,7 @@ class Criteria:
 
 
 def get_accounts(entry: data.Directive) -> set[str]:
-    """Extract account names referenced from a beancount directive.
+    """Extract account names referenced from a Beancount directive.
 
     - For transactions, return the name of all accounts in postings.
 
@@ -130,7 +148,6 @@ def get_accounts(entry: data.Directive) -> set[str]:
 
     """
     accounts = []
-
     match type(entry):
         case (
             data.Open | data.Close | data.Pad | data.Balance | data.Note | data.Document
@@ -142,8 +159,29 @@ def get_accounts(entry: data.Directive) -> set[str]:
     return set(accounts)
 
 
+def get_amounts(entry: data.Directive) -> set[Amount]:
+    """Extract all amounts present in a Beancount directive.
+
+    Amounts are extracted from directives of the following types:
+
+    - Transaction (one amount per Posting)
+    - Balance
+    - Price
+
+    """
+    amounts = []
+    match type(entry):
+        case (data.Balance | data.Price):
+            if hasattr(entry, "amount"):
+                amounts.append(entry.amount)
+        case data.Transaction:
+            amounts.extend(p.units for p in entry.postings)
+
+    return set(amounts)
+
+
 def get_metadata(entry: data.Directive) -> set[tuple[str, str]]:
-    """Extract all key/value metadata pairs attached to a beancount directive."""
+    """Extract all key/value metadata pairs attached to a Beancount directive."""
 
     metadata = list(getattr(entry, "meta", {}).items())
 
@@ -159,7 +197,7 @@ def get_metadata(entry: data.Directive) -> set[tuple[str, str]]:
 
 
 def get_tags(entry: data.Directive, posting_tags_meta=POSTING_TAGS_META) -> set[str]:
-    """Extract all tags applied to a beancount directive.
+    """Extract all tags applied to a Beancount directive.
 
     Returned tags include:
 
@@ -188,12 +226,22 @@ def get_tags(entry: data.Directive, posting_tags_meta=POSTING_TAGS_META) -> set[
 def entry_matches(
     entry: data.Directive, criteria: Criteria, posting_tags_meta=POSTING_TAGS_META
 ) -> bool:
-    """Check if a beancount entry matches stated criteria."""
+    """Check if a Beancount entry matches stated criteria."""
 
     predicates = []
     if criteria.account:
         predicates.append(
             lambda e: (any(re.search(criteria.account, a) for a in get_accounts(e)))
+        )
+    if criteria.amount:
+        # Matching semantics: there exists at least one amount (outer any()) that
+        # matches all (inner all()) amount predicates.
+        lambda e: (
+            # TODO BUG predicate always passes, which is obviously incorrect
+            any(
+                all(amount_pred.match(a) for amount_pred in criteria.amount)
+                for a in get_amounts(e)
+            )
         )
     if criteria.date:
         predicates.append(
@@ -231,25 +279,30 @@ def entry_matches(
 
 
 # TODO move to a class method of AmountPredicate
-def parse_amount_pred(amount_pred: str) -> AmountPredicate:
+def parse_amount_pred(s: str) -> AmountPredicate:
     """Parse an amount predicate from string."""
-    raise NotImplementedError("parse_amount_pred()")  # TODO
 
+    m = AmountPredicate.SYNTAX_RE.match(s)
+    if not m:
+        raise ValueError(f'invalid amount predicate "{s}"')
 
-# TODO move to a class attribute of DatePredicate
-# regular expression used to parse date predicates
-DATE_PRED_RE = re.compile(
-    r"^(?P<comp><|<=|=|>|>=)?(?P<year>\d{4})(-(?P<month>\d{2})(-(?P<day>\d{2}))?)?$"
-)
+    # remove None matches to avoid overriding AmountPredicate defaults below
+    matches = dict((k, v) for (k, v) in m.groupdict().items() if v is not None)
+    if "comp" in matches:
+        matches["comp"] = RelOp.parse(matches["comp"])
+    if "number" in matches:
+        matches["number"] = Decimal(matches["number"])
+
+    return AmountPredicate(**matches)
 
 
 # TODO move to a class method of DatePredicate
-def parse_date_pred(date_pred: str) -> DatePredicate:
+def parse_date_pred(s: str) -> DatePredicate:
     """Parse a date predicate from string."""
 
-    m = DATE_PRED_RE.match(date_pred)
+    m = DatePredicate.SYNTAX_RE.match(s)
     if not m:
-        raise ValueError(f'invalid date predicate "{date_pred}"')
+        raise ValueError(f'invalid date predicate "{s}"')
 
     # remove None matches to avoid overriding DatePredicate defaults below
     matches = dict((k, v) for (k, v) in m.groupdict().items() if v is not None)
@@ -382,7 +435,10 @@ def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
 
 @click.command()
 @click.argument(
-    "filename", type=click.Path(exists=True, dir_okay=False), default=DEFAULT_LEDGER
+    # TODO add support for reading from stdin, either implicitly or passing "-"
+    "filename",
+    type=click.Path(exists=True, dir_okay=False),
+    default=DEFAULT_LEDGER,
 )
 @click.option(
     "--account",
@@ -421,6 +477,7 @@ def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
     "--metadata",
     "-m",
     "metadata_pat",
+    # TODO make the second regex optional, easing filtering on metadata keys only
     metavar="REGEX:REGEX",
     help="Only return entries with at least one metadata key/value pair matching "
     "given pattern. A pattern is a pair of regular expression separated by ':', "
