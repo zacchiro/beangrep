@@ -350,7 +350,10 @@ def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
     """Filter entries to only return those that match criteria."""
     for entry in entries:
         if entry_matches(entry, criteria, posting_tags_meta):
+            logging.debug("Entry %s matches criteria, keeping it", entry)
             yield entry
+        else:
+            logging.debug("Entry %s does not matche criteria, skipping it", entry)
 
 
 @click.command()
@@ -435,6 +438,15 @@ def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
     show_default=True,
     help="Metadata key used to attach tags to transaction postings.",
 )
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    help="Increase logging verbosity. "
+    "Default level is WARNING. "
+    "Passing this option once (e.g., -v) will increase it to INFO, "
+    "twice or more (e.g., -vv) to DEBUG.",
+)
 def main(
     filename,
     account_re,
@@ -446,9 +458,17 @@ def main(
     type_pat,
     ignore_case,
     posting_tags_meta,
+    verbose,
 ):
-    # TODO make logging configurable via -v/--verbose
-    # logging.basicConfig(level=logging.DEBUG)  # XXX for debugging purposes
+    match verbose:
+        case 0:
+            log_level = logging.WARNING
+        case 1:
+            log_level = logging.INFO
+        case _:  # >= 2
+            log_level = logging.DEBUG
+    logging.basicConfig(level=log_level)
+
     ledger = beancount.loader.load_file(filename)
     try:
         criteria = _build_criteria(
@@ -463,7 +483,7 @@ def main(
         )
     except ValueError as e:
         raise click.UsageError(e.args[0]) from e
-    logging.debug(f"Search pattern: {criteria}")
+    logging.info("Using search criteria: %s", criteria)
     for entry in filter_entries(ledger[0], criteria, posting_tags_meta):
         print_entry(entry)
 
