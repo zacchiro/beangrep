@@ -246,57 +246,55 @@ def parse_types(types_pat: str) -> set[type]:
     "all" to mean all directive types.
 
     """
-    types = []
+    types: Optional[list[type]] = None
 
     def parse_type(s: str) -> type:
         match s:
             case "open":
-                types.append(data.Open)
+                return data.Open
             case "close":
-                types.append(data.Close)
+                return data.Close
             case "commodity":
-                types.append(data.Commodity)
+                return data.Commodity
             case "pad":
-                types.append(data.Pad)
+                return data.Pad
             case "balance":
-                types.append(data.Balance)
+                return data.Balance
             case "transaction":
-                types.append(data.Transaction)
+                return data.Transaction
             case "note":
-                types.append(data.Note)
+                return data.Note
             case "event":
-                types.append(data.Event)
+                return data.Event
             case "query":
-                types.append(data.Query)
+                return data.Query
             case "price":
-                types.append(data.Price)
+                return data.Price
             case "document":
-                types.append(data.Document)
+                return data.Document
             case "custom":
-                types.append(data.Custom)
+                return data.Custom
             case _:
                 raise ValueError(f'unknown directive type "{s}"')
 
     if types_pat == "all":
-        types.extend(
-            # List from beancount.core.data.Directive union. To be kept in sync.
-            [
-                data.Open,
-                data.Close,
-                data.Commodity,
-                data.Pad,
-                data.Balance,
-                data.Transaction,
-                data.Note,
-                data.Event,
-                data.Query,
-                data.Price,
-                data.Document,
-                data.Custom,
-            ]
-        )
+        # List from beancount.core.data.Directive union. To be kept in sync.
+        types = [
+            data.Open,
+            data.Close,
+            data.Commodity,
+            data.Pad,
+            data.Balance,
+            data.Transaction,
+            data.Note,
+            data.Event,
+            data.Query,
+            data.Price,
+            data.Document,
+            data.Custom,
+        ]
     else:
-        types.extend(parse_type(s.strip()) for s in types_pat.split(TYPE_SEP))
+        types = [parse_type(s) for s in types_pat.strip().split(TYPE_SEP)]
 
     return set(types)
 
