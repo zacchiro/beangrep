@@ -1,10 +1,6 @@
-#!/usr/bin/env python
-
 # SPDX-FileCopyrightText: 2024 Stefano Zacchiroli <zack@upsilon.cc>
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-from mybeancount import beangrep
+"""Beangrep: a grep like command-line filter for Beancount ledgers"""
 
-
-if __name__ == "__main__":
-    beangrep.cli()
+from .beangrep import *
