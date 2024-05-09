@@ -11,6 +11,8 @@ import re
 from beancount.core import data
 from beancount.parser.printer import print_entry
 from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
 from typing import Any, Optional
 
 # TODO add unit tests
@@ -29,14 +31,62 @@ class Criteria:
     """Criteria to select matching beancount entries."""
 
     account: Optional[re.Pattern] = None
-    amount: Optional[Any] = None  # TODO: filter on amounts
-    currency: Optional[Any] = None  # TODO: filter on currencies
+    amount: Optional[Any] = None  # TODO: filter on amounts/currencies
     date: Optional[Any] = None  # TODO: filter on dates
     metadata: Optional[tuple[re.Pattern, re.Pattern]] = None
     narration: Optional[re.Pattern] = None
     payee: Optional[re.Pattern] = None
     tag: Optional[re.Pattern] = None
     types: Optional[set[type]] = None
+
+
+class RelOp(Enum):
+    """Relational comparison operator."""
+
+    EQ = 1  # =
+    LT = 2  # <
+    GT = 3  # >
+    LEQ = 4  # <=
+    GEQ = 5  # <=
+
+    def eval(self, lhs, rhs) -> bool:
+        """Evaluate the relational operator on two values (left-hand side and right-hand
+        side, respectively).
+
+        """
+        match self.value:
+            case self.EQ.value:
+                return lhs == rhs
+            case self.LT.value:
+                return lhs < rhs
+            case self.GT.value:
+                return lhs > rhs
+            case self.LEQ.value:
+                return lhs <= rhs
+            case self.GEQ.value:
+                return lhs >= rhs
+
+
+@dataclass
+class DatePredicate:
+    """Predicate on dates, filtering on year/month/day."""
+
+    comp: RelOp = RelOp.EQ
+    year: Optional[int] = None
+    month: Optional[int] = None
+    day: Optional[int] = None
+
+    def match(self, date: datetime) -> bool:
+        """Test if a date matches the date predicate."""
+        is_match = True
+        if is_match and self.year is not None:
+            is_match = is_match and self.comp.eval(date.year, self.year)
+        if is_match and self.month is not None:
+            is_match = is_match and self.comp.eval(date.month, self.month)
+        if is_match and self.day is not None:
+            is_match = is_match and self.comp.eval(date.day, self.day)
+
+        return is_match
 
 
 def get_accounts(entry: data.Directive) -> set[str]:
@@ -84,15 +134,13 @@ def get_tags(entry: data.Directive, posting_tags_meta=POSTING_TAGS_META) -> set[
 
     - Tags applied globally to the directive.
 
-    - Tags applied locally to a transaction posting, as comma-separated strings in the
-      value of the posting_tags_meta metadata key. Passing posting_tags_meta=None will
-      disable looking for these tags.
+    - "Fake" tags applied to transaction postings (as Beancount syntax currently does
+      not support tags on postings) using the value associated to the metadata key
+      specified with posting_tags_meta. To disable looking for these tags pass
+      posting_tags_meta=None.
 
     """
-    tags = []
-
-    if hasattr(entry, "tags"):
-        tags.extend(entry.tags)
+    tags = list(getattr(entry, "tags", []))
 
     if isinstance(entry, data.Transaction) and posting_tags_meta is not None:
         for posting in getattr(entry, "postings", []):
@@ -267,12 +315,12 @@ def _build_criteria(
     multiple=True,
     help="Only return entries with dates matching the given date predicate. "
     "A date predicate start with an optional comparison operator "
-    "(one of '<', '=', '>', with '=' being the default), "
+    "(one of '<', '<=', '=', '>=', '>', with '=' being the default), "
     "and is followed by a date in the form YYYY-[MM[-DD]]. "
     "Multiple date predicates can be given to express complex date ranges.",
 )
 @click.option(
-    "--meta",
+    "--meta",  # TODO add "--metadata" as an alias for this
     "-m",
     "metadata_pat",
     metavar="REGEX:REGEX",
@@ -334,6 +382,7 @@ def main(
     tag_re,
     type_pat,
 ):
+    # TODO make logging configurable via -v/--verbose
     # logging.basicConfig(level=logging.DEBUG)  # XXX for debugging purposes
     ledger = beancount.loader.load_file(filename)
     try:
