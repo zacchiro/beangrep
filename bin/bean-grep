@@ -346,6 +346,13 @@ def _build_criteria(
     return criteria
 
 
+def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
+    """Filter entries to only return those that match criteria."""
+    for entry in entries:
+        if entry_matches(entry, criteria, posting_tags_meta):
+            yield entry
+
+
 @click.command()
 @click.argument(
     "filename", type=click.Path(exists=True, dir_okay=False), default=DEFAULT_LEDGER
@@ -456,9 +463,8 @@ def main(
     except ValueError as e:
         raise click.UsageError(e.args[0]) from e
     logging.debug(f"Search pattern: {criteria}")
-    for entry in ledger[0]:
-        if entry_matches(entry, criteria, posting_tags_meta):
-            print_entry(entry)
+    for entry in filter_entries(ledger[0], criteria, posting_tags_meta):
+        print_entry(entry)
 
 
 if __name__ == "__main__":
