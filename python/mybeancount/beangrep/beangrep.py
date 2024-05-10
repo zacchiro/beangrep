@@ -461,7 +461,7 @@ def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
     "--amount",
     "-A",
     "amount_preds",
-    metavar="[OP]AMOUNT [REGEX]",
+    metavar='"[OP]AMOUNT [REGEX]"',
     multiple=True,
     help="Only return entries with amounts matching the given amount predicate. "
     "An amount predicate start with an optional comparison operator "
