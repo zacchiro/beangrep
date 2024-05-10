@@ -17,7 +17,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Optional, Self
 
-# TODO augment unit tests (code coverage >= 90%)
+# TODO add CLI integration tests
 # TODO make code mypy clean
 
 DEFAULT_LEDGER = "current.beancount"
@@ -155,7 +155,7 @@ class DatePredicate:
             case (y, m, None, RelOp.LEQ) if y is not None and m is not None:
                 return (None, date(y, m, calendar.monthrange(y, m)[1]))
             case (y, m, None, RelOp.EQ) if y is not None and m is not None:
-                (date(y, m, 1), date(y, m, calendar.monthrange(y, m)[1]))
+                return (date(y, m, 1), date(y, m, calendar.monthrange(y, m)[1]))
             case (y, m, None, RelOp.GEQ) if y is not None and m is not None:
                 return (date(y, m, 1), None)
             case (y, m, None, RelOp.GT) if y is not None and m is not None:

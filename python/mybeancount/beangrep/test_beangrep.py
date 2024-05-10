@@ -3,11 +3,19 @@
 
 import beancount.loader
 import re
+import pytest
 
 from beancount.core import data
 from beancount.core.amount import Amount
-from .beangrep import AmountPredicate, Criteria, DatePredicate, RelOp
-from .beangrep import filter_entries
+from .beangrep import (
+    AmountPredicate,
+    Criteria,
+    DatePredicate,
+    RelOp,
+    filter_entries,
+    parse_types,
+    TYPE_SEP,
+)
 from datetime import date
 from decimal import Decimal
 
@@ -60,6 +68,34 @@ def test_relop():
     assert RelOp.GEQ.eval(43, 42)
 
 
+def test_relop_parse_error():
+    with pytest.raises(ValueError):
+        assert RelOp.parse("!")
+    with pytest.raises(ValueError):
+        assert RelOp.parse("%")
+
+
+def test_amount_predicate():
+    p = AmountPredicate.parse
+    assert p("42").match(Amount(Decimal(42), "EUR"))
+    assert not p("=42").match(Amount(Decimal(41), "EUR"))
+    assert p("42 EUR").match(Amount(Decimal(42), "EUR"))
+    assert not p("42 EUR").match(Amount(Decimal(42), "USD"))
+    assert p(">42").match(Amount(Decimal(43), "EUR"))
+    assert not p(">42").match(Amount(Decimal(42), "EUR"))
+    assert p("<=42 EUR").match(Amount(Decimal(42), "EUR"))
+    assert p("<=42").match(Amount(Decimal(41), "EUR"))
+    assert not p("<=42 EUR").match(Amount(Decimal(43), "EUR"))
+    assert not p("<=42 EUR").match(Amount(Decimal(42), "USD"))
+
+
+def test_amount_predicate_parse_error():
+    with pytest.raises(ValueError):
+        assert AmountPredicate.parse("==42")
+    with pytest.raises(ValueError):
+        assert AmountPredicate.parse("=42 EUR USD")
+
+
 def test_date_predicate():
     p = DatePredicate.parse
     assert p("=2024").match(date(2024, 5, 10))
@@ -77,18 +113,13 @@ def test_date_predicate():
     assert p("<2024-01-01").match(date(2023, 12, 31))
 
 
-def test_amount_predicate():
-    p = AmountPredicate.parse
-    assert p("42").match(Amount(Decimal(42), "EUR"))
-    assert not p("=42").match(Amount(Decimal(41), "EUR"))
-    assert p("42 EUR").match(Amount(Decimal(42), "EUR"))
-    assert not p("42 EUR").match(Amount(Decimal(42), "USD"))
-    assert p(">42").match(Amount(Decimal(43), "EUR"))
-    assert not p(">42").match(Amount(Decimal(42), "EUR"))
-    assert p("<=42 EUR").match(Amount(Decimal(42), "EUR"))
-    assert p("<=42").match(Amount(Decimal(41), "EUR"))
-    assert not p("<=42 EUR").match(Amount(Decimal(43), "EUR"))
-    assert not p("<=42 EUR").match(Amount(Decimal(42), "USD"))
+def test_date_predicate_parse_error():
+    with pytest.raises(ValueError):
+        assert DatePredicate.parse("==2014")
+    with pytest.raises(ValueError):
+        assert DatePredicate.parse("=2014-01-01-01")
+    with pytest.raises(ValueError):
+        assert DatePredicate.parse("/2014-01")
 
 
 def load_sample_ledger(filename=SAMPLE_LEDGER):
@@ -123,9 +154,14 @@ def test_date_filtering():
     l = load_sample_ledger()  # noqa:E741
     assert grep_len(l, Criteria(date=[DatePredicate.parse("<1700")])) == 0
     assert grep_len(l, Criteria(date=[DatePredicate.parse("2013")])) == 739
+    assert grep_len(l, Criteria(date=[DatePredicate.parse("2013-03")])) == 67
+    assert grep_len(l, Criteria(date=[DatePredicate.parse("<=2013-12")])) == 765
     assert grep_len(l, Criteria(date=[DatePredicate.parse("2014")])) == 750
     assert grep_len(l, Criteria(date=[DatePredicate.parse("=2015")])) == 731
+    assert grep_len(l, Criteria(date=[DatePredicate.parse("=2015-05-01")])) == 6
     assert grep_len(l, Criteria(date=[DatePredicate.parse("=2030")])) == 1
+    assert grep_len(l, Criteria(date=[DatePredicate.parse(">=2029-08")])) == 1
+    assert grep_len(l, Criteria(date=[DatePredicate.parse(">2015-12-17")])) == 9
     assert (
         grep_len(
             l,
@@ -195,3 +231,25 @@ def test_type_filtering():
     assert grep_len(l, Criteria(types=[data.Open])) == 60
     assert grep_len(l, Criteria(types=[data.Transaction, data.Open])) == 1146 + 60
     assert grep_len(l, Criteria(types=[data.Pad])) == 0
+
+
+def test_parse_types():
+    assert set(parse_types("all")) == set(data.ALL_DIRECTIVES)
+    assert set(parse_types(TYPE_SEP.join(["open", "close"]))) == set(
+        [data.Open, data.Close]
+    )
+    assert set(
+        parse_types(
+            TYPE_SEP.join(["commodity", "balance", "transaction", "query", "price"])
+        )
+    ) == set([data.Commodity, data.Balance, data.Transaction, data.Query, data.Price])
+    assert set(parse_types(TYPE_SEP.join(["pad", "note", "document"]))) == set(
+        [data.Pad, data.Note, data.Document]
+    )
+    assert set(parse_types(TYPE_SEP.join(["event", "custom"]))) == set(
+        [data.Event, data.Custom]
+    )
+    with pytest.raises(ValueError):
+        parse_types("foo")
+    with pytest.raises(ValueError):
+        parse_types("^%@$#&")
