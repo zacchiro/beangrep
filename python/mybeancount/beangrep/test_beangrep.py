@@ -12,6 +12,7 @@ from datetime import date
 from decimal import Decimal
 
 SAMPLE_LEDGER = "example.beancount"
+DIRECTIVES_IN_SAMPLE = 2247  # `bean-quey example.beancount` shows this
 
 _META = data.new_metadata("beangrep/test_beangrep.py", 1234)
 _FLAG = "*"
@@ -109,6 +110,7 @@ def test_account_filtering():
 
 def test_amount_filtering():
     l = load_sample_ledger()  # noqa:E741
+    # TODO add tests for multiple amount predicates
     assert grep_len(l, Criteria(amount=[AmountPredicate.parse("=3219.17 USD")])) == 2
     assert grep_len(l, Criteria(amount=[AmountPredicate.parse("3219.17")])) == 2
     assert grep_len(l, Criteria(amount=[AmountPredicate.parse("=3219.17 EUR")])) == 0
@@ -118,11 +120,49 @@ def test_amount_filtering():
 
 
 def test_date_filtering():
-    l = load_sample_ledger()  # noqa:E741  # TODO
+    l = load_sample_ledger()  # noqa:E741
+    assert grep_len(l, Criteria(date=[DatePredicate.parse("<1700")])) == 0
+    assert grep_len(l, Criteria(date=[DatePredicate.parse("2013")])) == 739
+    assert grep_len(l, Criteria(date=[DatePredicate.parse("2014")])) == 750
+    assert grep_len(l, Criteria(date=[DatePredicate.parse("=2015")])) == 731
+    assert grep_len(l, Criteria(date=[DatePredicate.parse("=2030")])) == 1
+    assert (
+        grep_len(
+            l,
+            Criteria(
+                date=[DatePredicate.parse(">=2014"), DatePredicate.parse("<=2015")]
+            ),
+        )
+        == 750 + 731
+    )
+    assert (
+        grep_len(
+            l,
+            Criteria(date=[DatePredicate.parse(">2013"), DatePredicate.parse("<2013")]),
+        )
+        == 0
+    )
+    assert grep_len(l, Criteria(date=[DatePredicate.parse(">2031")])) == 0
 
 
 def test_metadata_filtering():
-    l = load_sample_ledger()  # noqa:E741  # TODO
+    l = load_sample_ledger()  # noqa:E741
+    assert (
+        grep_len(l, Criteria(metadata=(re.compile("^name$"), re.compile("US Dollar"))))
+        == 1
+    )
+    assert grep_len(l, Criteria(metadata=(re.compile("^name$"), re.compile(".*")))) == 9
+    assert (
+        grep_len(l, Criteria(metadata=(re.compile("^name$"), re.compile("Vanguard"))))
+        == 3
+    )
+    assert (
+        grep_len(l, Criteria(metadata=(re.compile("filename"), re.compile(".*"))))
+        == DIRECTIVES_IN_SAMPLE
+    )
+    assert (
+        grep_len(l, Criteria(metadata=(re.compile(".*"), re.compile("NYSEARC")))) == 4
+    )
 
 
 def test_narration_filtering():
@@ -150,7 +190,7 @@ def test_tag_filtering():
 
 def test_type_filtering():
     l = load_sample_ledger()  # noqa:E741
-    assert grep_len(l, Criteria(types=data.ALL_DIRECTIVES)) == 2247
+    assert grep_len(l, Criteria(types=data.ALL_DIRECTIVES)) == DIRECTIVES_IN_SAMPLE
     assert grep_len(l, Criteria(types=[data.Transaction])) == 1146
     assert grep_len(l, Criteria(types=[data.Open])) == 60
     assert grep_len(l, Criteria(types=[data.Transaction, data.Open])) == 1146 + 60

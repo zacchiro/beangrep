@@ -342,8 +342,10 @@ def metadata_matches(
     entry: data.Directive, criteria: tuple[re.Pattern, re.Pattern]
 ) -> bool:
     """Check if a Beancount entry matches metadata criteria."""
-    (key_re, val_re) = criteria.metadata
-    return any(key_re.search(k) and val_re.search(v) for (k, v) in get_metadata(entry))
+    (key_re, val_re) = criteria
+    return any(
+        key_re.search(k) and val_re.search(str(v)) for (k, v) in get_metadata(entry)
+    )
 
 
 def narration_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
