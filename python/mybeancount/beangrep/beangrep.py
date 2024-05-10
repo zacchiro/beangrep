@@ -16,7 +16,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Optional, Self
 
-# TODO add unit tests
+# TODO augment unit tests (code coverage >= 90%)
 # TODO make code mypy clean
 
 DEFAULT_LEDGER = "current.beancount"
@@ -25,6 +25,7 @@ POSTING_TAGS_SEP = ","
 KEY_VAL_SEP = ":"
 POSTING_TAGS_META = "tags"
 TYPE_SEP = "|"
+META_VAL_RE = ".*"
 
 
 class RelOp(Enum):
@@ -415,12 +416,10 @@ def _build_criteria(
     if date_preds is not None:
         criteria.date = list(map(DatePredicate.parse, date_preds))
     if metadata_pat is not None:
-        if KEY_VAL_SEP not in metadata_pat:
-            raise ValueError(
-                f'invalid metadata pattern "{metadata_pat}" '
-                f"(does not contain key/value separator '{KEY_VAL_SEP}')"
-            )
-        (key_re, val_re) = metadata_pat.split(KEY_VAL_SEP, maxsplit=1)
+        if KEY_VAL_SEP in metadata_pat:
+            (key_re, val_re) = metadata_pat.split(KEY_VAL_SEP, maxsplit=1)
+        else:
+            (key_re, val_re) = (metadata_pat, META_VAL_RE)
         criteria.metadata = (re_compile(key_re), re_compile(val_re))
     if narration_re is not None:
         criteria.narration = re_compile(narration_re)
@@ -488,11 +487,11 @@ def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
     "--metadata",
     "-m",
     "metadata_pat",
-    # TODO make the second regex optional, easing filtering on metadata keys only
-    metavar="REGEX:REGEX",
+    metavar="REGEX[:REGEX]",
     help="Only return entries with at least one metadata key/value pair matching "
-    "given pattern. A pattern is a pair of regular expression separated by ':', "
-    "the former matching on metadata key, the latter on metadata value.",
+    "given pattern. A pattern is a pair of regexs separated by ':', "
+    "the former matching on metadata key, the latter on metadata value. "
+    f"The second regex is optional and defaults to '{META_VAL_RE}'.",
 )
 @click.option(
     "--narration",
