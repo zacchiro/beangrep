@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 import beancount.loader
+import calendar
 import click
 import logging
 import re
@@ -11,7 +12,7 @@ from beancount.core.amount import Amount
 from beancount.parser.printer import print_entry
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, timedelta
 from decimal import Decimal
 from enum import Enum
 from typing import Optional, Self
@@ -116,24 +117,81 @@ class AmountPredicate:
 
 @dataclass
 class DatePredicate:
-    """Predicate on dates, filtering on year/month/day."""
+    """Predicate on dates, filtering on year/month/day.
+
+    Assumption: if day is not None, neither year nor month is None; if month is not
+    None, year is not None. When built from the CLI parameter, this assumption is
+    satisfied by construction by the input format "YYYY[-MM[-DD]]".
+
+    """
 
     comp: RelOp = RelOp.EQ
     year: Optional[int] = None
     month: Optional[int] = None
     day: Optional[int] = None
 
-    # TODO BUG: checking field by field does not work, because it requires that each
-    # field is individually larger/smaller/equal than its peer. Cf. failing tests.
-    def match(self, date: datetime) -> bool:
+    def date_range(self) -> tuple[Optional[date], Optional[date]]:
+        """Return the min/max valid dates (inclusive) for the predicate.
+
+        None is returned to denote that there is no min/max.
+
+        """
+        match (self.year, self.month, self.day, self.comp):
+            # constraints: year only
+            case (y, None, None, RelOp.LT) if y is not None:
+                return (None, date(y - 1, 12, 31))
+            case (y, None, None, RelOp.LEQ) if y is not None:
+                return (None, date(y, 12, 31))
+            case (y, None, None, RelOp.EQ) if y is not None:
+                return (date(y, 1, 1), date(y, 12, 31))
+            case (y, None, None, RelOp.GEQ) if y is not None:
+                return (date(y, 1, 1), None)
+            case (y, None, None, RelOp.GT) if y is not None:
+                return (date(y + 1, 1, 1), None)
+
+            # constraints: year and month
+            case (y, m, None, RelOp.LT) if y is not None and m is not None:
+                return (None, date(y, m, 1) - timedelta(days=1))
+            case (y, m, None, RelOp.LEQ) if y is not None and m is not None:
+                return (None, date(y, m, calendar.monthrange(y, m)[1]))
+            case (y, m, None, RelOp.EQ) if y is not None and m is not None:
+                (date(y, m, 1), date(y, m, calendar.monthrange(y, m)[1]))
+            case (y, m, None, RelOp.GEQ) if y is not None and m is not None:
+                return (date(y, m, 1), None)
+            case (y, m, None, RelOp.GT) if y is not None and m is not None:
+                return (
+                    date(y, m, calendar.monthrange(y, m)[1]) + timedelta(days=1),
+                    None,
+                )
+
+            # constraints: year, month, day
+            # fmt: off
+            case (y, m, d, RelOp.LT) \
+                    if y is not None and m is not None and d is not None:
+                return (None, date(y, m, d) - timedelta(days=1))
+            case (y, m, d, RelOp.LEQ) \
+                    if y is not None and m is not None and d is not None:
+                return (None, date(y, m, d))
+            case (y, m, d, RelOp.EQ) \
+                    if y is not None and m is not None and d is not None:
+                return (date(y, m, d), date(y, m, d))
+            case (y, m, d, RelOp.GEQ) \
+                    if y is not None and m is not None and d is not None:
+                return (date(y, m, d), None)
+            case (y, m, d, RelOp.GT) \
+                    if y is not None and m is not None and d is not None:
+                return (date(y, m, d) + timedelta(days=1), None)
+            # fmt: on
+
+    def match(self, date: date) -> bool:
         """Test if a date matches the date predicate."""
+        (min_date, max_date) = self.date_range()
+
         is_match = True
-        if is_match and self.year is not None:
-            is_match = is_match and self.comp.eval(date.year, self.year)
-        if is_match and self.month is not None:
-            is_match = is_match and self.comp.eval(date.month, self.month)
-        if is_match and self.day is not None:
-            is_match = is_match and self.comp.eval(date.day, self.day)
+        if is_match and min_date is not None:
+            is_match = is_match and min_date <= date
+        if is_match and max_date is not None:
+            is_match = is_match and date <= max_date
 
         return is_match
 

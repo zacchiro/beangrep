@@ -8,7 +8,7 @@ from beancount.core import data
 from beancount.core.amount import Amount
 from .beangrep import AmountPredicate, Criteria, DatePredicate, RelOp
 from .beangrep import filter_entries
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 
 SAMPLE_LEDGER = "example.beancount"
@@ -61,14 +61,19 @@ def test_relop():
 
 def test_date_predicate():
     p = DatePredicate.parse
-    assert p("=2024").match(datetime(2024, 5, 10))
-    assert not p("2024").match(datetime(2025, 5, 10))
-    # assert p("<2024-03").match(datetime(2024, 2, 10))  # TODO fails, should pass
-    assert not p("<2024-03").match(datetime(2024, 3, 10))
-    # assert p(">2023-01").match(datetime(2023, 2, 28))  # TODO fails, should pass
-    assert p(">=2024-01-02").match(datetime(2024, 1, 3))
-    assert p(">=2024-01-02").match(datetime(2024, 1, 2))
-    assert not p(">=2024-01-02").match(datetime(2024, 1, 1))
+    assert p("=2024").match(date(2024, 5, 10))
+    assert not p("2024").match(date(2025, 5, 10))
+    assert p("<2024-03").match(date(2024, 2, 29))
+    assert not p("<2024-03").match(date(2024, 3, 10))
+    assert p(">2023-01").match(date(2023, 2, 28))
+    assert p(">=2024-01-02").match(date(2024, 1, 3))
+    assert p(">=2024-01-02").match(date(2024, 1, 2))
+    assert not p(">=2024-01-02").match(date(2024, 1, 1))
+    assert p("<=2024-01-01").match(date(2024, 1, 1))
+    assert p("<=2024-01-01").match(date(2023, 12, 31))
+    assert not p("<=2024-01-01").match(date(2024, 1, 2))
+    assert not p("<2024-01-01").match(date(2024, 1, 1))
+    assert p("<2024-01-01").match(date(2023, 12, 31))
 
 
 def test_amount_predicate():
