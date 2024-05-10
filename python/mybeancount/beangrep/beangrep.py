@@ -294,7 +294,11 @@ def narration_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
 
 def payee_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
     """Check if a Beancount entry matches payee criteria."""
-    return hasattr(entry, "payee") and criteria.search(entry.payee)
+    return (
+        hasattr(entry, "payee")
+        and entry.payee is not None
+        and criteria.search(entry.payee)
+    )
 
 
 def tag_matches(
@@ -328,7 +332,7 @@ def entry_matches(
     if criteria.payee:
         predicates.append(lambda e: payee_matches(e, criteria.payee))
     if criteria.tag:
-        predicates.append(lambda e: tag_matches(e, criteria.get, posting_tags_meta))
+        predicates.append(lambda e: tag_matches(e, criteria.tag, posting_tags_meta))
     if criteria.types:
         predicates.append(lambda e: type_matches(entry, criteria.types))
 
@@ -375,21 +379,7 @@ def parse_types(types_pat: str) -> set[type]:
                 raise ValueError(f'unknown directive type "{s}"')
 
     if types_pat == "all":
-        # List from beancount.core.data.Directive union. To be kept in sync.
-        types = [
-            data.Open,
-            data.Close,
-            data.Commodity,
-            data.Pad,
-            data.Balance,
-            data.Transaction,
-            data.Note,
-            data.Event,
-            data.Query,
-            data.Price,
-            data.Document,
-            data.Custom,
-        ]
+        types = data.ALL_DIRECTIVES
     else:
         types = [parse_type(s) for s in types_pat.strip().split(TYPE_SEP)]
 
