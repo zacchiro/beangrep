@@ -9,6 +9,7 @@ import re
 from beancount.core import data
 from beancount.core.amount import Amount
 from beancount.parser.printer import print_entry
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -257,6 +258,57 @@ def get_tags(entry: data.Directive, posting_tags_meta=POSTING_TAGS_META) -> set[
     return set(tags)
 
 
+def account_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
+    """Check if a Beancount entry matches account criteria."""
+    return any(criteria.search(a) for a in get_accounts(entry))
+
+
+def amount_matches(entry: data.Directive, criteria: Iterable[AmountPredicate]) -> bool:
+    """Check if a Beancount entry matches amount criteria."""
+    # Matching semantics: there exists at least one amount that matches all amount
+    # predicates. Note: should return False for transactions with no amount.
+    return bool(  # there is at least one amount...
+        amounts := get_amounts(entry)
+    ) and any(  # ... that matches all amount predicates
+        all(amount_pred.match(a) for amount_pred in criteria) for a in amounts
+    )
+
+
+def date_matches(entry: data.Directive, criteria: Iterable[DatePredicate]) -> bool:
+    """Check if a Beancount entry matches date criteria."""
+    return all(date_pred.match(entry.date) for date_pred in criteria)
+
+
+def metadata_matches(
+    entry: data.Directive, criteria: tuple[re.Pattern, re.Pattern]
+) -> bool:
+    """Check if a Beancount entry matches metadata criteria."""
+    (key_re, val_re) = criteria.metadata
+    return any(key_re.search(k) and val_re.search(v) for (k, v) in get_metadata(entry))
+
+
+def narration_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
+    """Check if a Beancount entry matches narration criteria."""
+    return hasattr(entry, "narration") and criteria.search(entry.narration)
+
+
+def payee_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
+    """Check if a Beancount entry matches payee criteria."""
+    return hasattr(entry, "payee") and criteria.search(entry.payee)
+
+
+def tag_matches(
+    entry: data.Directive, criteria: re.Pattern, posting_tags_meta=POSTING_TAGS_META
+) -> bool:
+    """Check if a Beancount entry matches tag criteria."""
+    return any(criteria.search(t) for t in get_tags(entry, posting_tags_meta))
+
+
+def type_matches(entry: data.Directive, types: Iterable[type]) -> bool:
+    """Check if a Beancount entry matches type criteria."""
+    return type(entry) in types
+
+
 def entry_matches(
     entry: data.Directive, criteria: Criteria, posting_tags_meta=POSTING_TAGS_META
 ) -> bool:
@@ -264,49 +316,21 @@ def entry_matches(
 
     predicates = []
     if criteria.account:
-        predicates.append(
-            lambda e: (any(re.search(criteria.account, a) for a in get_accounts(e)))
-        )
+        predicates.append(lambda e: account_matches(e, criteria.account))
     if criteria.amount:
-        # Matching semantics: there exists at least one amount (outer any()) that
-        # matches all (inner all()) amount predicates.
-        lambda e: (
-            # TODO BUG predicate always passes, which is obviously incorrect
-            any(
-                all(amount_pred.match(a) for amount_pred in criteria.amount)
-                for a in get_amounts(e)
-            )
-        )
+        predicates.append(lambda e: amount_matches(entry, criteria.amount))
     if criteria.date:
-        predicates.append(
-            lambda e: (all(date_pred.match(e.date) for date_pred in criteria.date))
-        )
+        predicates.append(lambda e: date_matches(e, criteria.date))
     if criteria.metadata:
-        (key_re, val_re) = criteria.metadata
-        predicates.append(
-            lambda e: any(
-                re.search(key_re, k) and re.search(val_re, v)
-                for (k, v) in get_metadata(e)
-            )
-        )
+        predicates.append(lambda e: metadata_matches(e, criteria.metadata))
     if criteria.narration:
-        predicates.append(
-            lambda e: (
-                hasattr(e, "narration") and re.search(criteria.narration, e.narration)
-            )
-        )
+        predicates.append(lambda e: narration_matches(e, criteria.narration))
     if criteria.payee:
-        predicates.append(
-            lambda e: (hasattr(e, "payee") and re.search(criteria.payee, e.payee))
-        )
+        predicates.append(lambda e: payee_matches(e, criteria.payee))
     if criteria.tag:
-        predicates.append(
-            lambda e: (
-                any(re.search(criteria.tag, t) for t in get_tags(e, posting_tags_meta))
-            )
-        )
+        predicates.append(lambda e: tag_matches(e, criteria.get, posting_tags_meta))
     if criteria.types:
-        predicates.append(lambda e: type(e) in criteria.types)
+        predicates.append(lambda e: type_matches(entry, criteria.types))
 
     is_match = all(p(entry) for p in predicates)
     return is_match
