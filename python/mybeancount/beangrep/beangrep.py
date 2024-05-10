@@ -83,7 +83,7 @@ class AmountPredicate:
         if is_match and self.number is not None:
             is_match = is_match and self.comp.eval(amount.number, self.number)
         if is_match and self.currency is not None:
-            is_match = is_match and self.currency.match(amount.currency)
+            is_match = is_match and self.currency == amount.currency
 
         return is_match
 
@@ -121,6 +121,8 @@ class DatePredicate:
     month: Optional[int] = None
     day: Optional[int] = None
 
+    # TODO BUG: checking field by field does not work, because it requires that each
+    # field is individually larger/smaller/equal than its peer. Cf. failing tests.
     def match(self, date: datetime) -> bool:
         """Test if a date matches the date predicate."""
         is_match = True
