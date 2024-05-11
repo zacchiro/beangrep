@@ -634,8 +634,16 @@ def filter_entries(
             logging.debug("Entry %s does not match criteria, skipping it", entry)
 
 
-@click.command(help="Search for entries matching given criteria in a Beancount ledger.")
-@click.argument("filename", required=False, default="-")
+@click.command(
+    help="Search for entries matching given criteria in a Beancount ledger. "
+    "Pretty print matching entries to standard output.\n\n"
+    "The granularity of matching (and results) is that of individual entries, e.g., "
+    "full transactions, balances, notes, etc. By default only transactions are returned"
+    "; use the --type/-T option to override.\n\n"
+    'To read from standard input, pass "-" as FILENAME, but beware that it implies '
+    "on-disk buffering of stdin."
+)
+@click.argument("filename", required=True)
 @click.option(
     "--account",
     "-a",
