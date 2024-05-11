@@ -283,9 +283,14 @@ def test_cli_exit_code():
 
     # TODO add tests for criteria: account, amount, date, metadata, tag
 
-    # TODO add tests for paramter combinations
+    # TODO add tests for criteria combinations
 
-    # TODO add tests for -i/--ignore-case
+
+def test_cli_ignore_case():
+    runner = CliRunner()
+    assert runner.invoke(cli, ["-p", "Uncle Boons", SAMPLE_LEDGER]).exit_code == 0
+    assert runner.invoke(cli, ["-p", "uncle boons", SAMPLE_LEDGER]).exit_code == 1
+    assert runner.invoke(cli, ["-i", "-p", "uncle boons", SAMPLE_LEDGER]).exit_code == 0
 
 
 def test_cli_quiet():
