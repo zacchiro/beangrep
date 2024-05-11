@@ -231,6 +231,8 @@ class Criteria:
     tag: Optional[re.Pattern] = None
     types: Optional[set[type]] = None
 
+    # TODO add a generic criteria matching on any of the above
+
 
 def get_accounts(entry: data.Directive) -> set[str]:
     """Extract account names referenced from a Beancount directive.
@@ -503,6 +505,7 @@ def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
             logging.debug("Entry %s does not matche criteria, skipping it", entry)
 
 
+# TODO add brief help message explaining what bean-grep does
 @click.command()
 @click.argument(
     # TODO add support for reading from stdin, either implicitly or passing "-"
@@ -596,6 +599,7 @@ def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
     show_default=True,
     help="Ignore case distinctions in string matches.",
 )
+# TODO add grep style -q/--quiet/--silent flag. Note that it impacts exit code.
 @click.option(
     "--posting-tags-meta",
     default=POSTING_TAGS_META,
@@ -652,6 +656,8 @@ def cli(
     logging.info("Using search criteria: %s", criteria)
     for entry in filter_entries(ledger[0], criteria, posting_tags_meta):
         print_entry(entry)
+
+    # TODO set exit code based on match results
 
 
 if __name__ == "__main__":
