@@ -286,3 +286,15 @@ def test_cli_exit_code():
     # TODO add tests for paramter combinations
 
     # TODO add tests for -i/--ignore-case
+
+
+def test_cli_quiet():
+    runner = CliRunner()
+
+    result = runner.invoke(cli, ["--amount", "=76.81 USD", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "76.81 USD" in result.output
+
+    result = runner.invoke(cli, ["--quiet", "--amount", "=76.81 USD", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "76.81 USD" not in result.output
