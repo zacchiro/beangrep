@@ -1,12 +1,12 @@
 # SPDX-FileCopyrightText: 2024 Stefano Zacchiroli <zack@upsilon.cc>
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-import beancount.loader
+import beancount.loader  # type: ignore
 import re
 import pytest
 
-from beancount.core import data
-from beancount.core.amount import Amount
+from beancount.core import data  # type: ignore
+from beancount.core.amount import Amount  # type: ignore
 from .beangrep import (
     AmountPredicate,
     Criteria,
