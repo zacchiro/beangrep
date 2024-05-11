@@ -20,11 +20,13 @@ from typing import cast, Optional, Self
 
 DEFAULT_LEDGER = "current.beancount"
 
-POSTING_TAGS_SEP = ","
 KEY_VAL_SEP = ":"
-POSTING_TAGS_META = "tags"
-TYPE_SEP = "|"
+INTERNALS_META = set(["filename", "lineno"])
 META_VAL_RE = ".*"
+POSTING_TAGS_META = "tags"
+POSTING_TAGS_SEP = ","
+SKIP_INTERNALS = True
+TYPE_SEP = "|"
 
 
 class RelOp(Enum):
@@ -234,6 +236,8 @@ class Criteria:
     tag: Optional[re.Pattern] = None
     types: Optional[set[type]] = None
 
+    # TODO add a criteria matching on ^links
+
     # TODO add a generic criteria matching on any of the above
 
 
@@ -279,7 +283,12 @@ def get_amounts(entry: data.Directive) -> set[Amount]:
     return set(amounts)
 
 
-def get_metadata(entry: data.Directive) -> set[tuple[str, str]]:
+def get_metadata(
+    entry: data.Directive,
+    skip_dunder: bool = True,
+    skip_internals: bool = SKIP_INTERNALS,
+    internals_meta: set[str] = INTERNALS_META,
+) -> set[tuple[str, str]]:
     """Extract all key/value metadata pairs attached to a Beancount directive."""
 
     metadata = list(getattr(entry, "meta", {}).items())
@@ -288,11 +297,15 @@ def get_metadata(entry: data.Directive) -> set[tuple[str, str]]:
         for posting in entry.postings:
             metadata.extend(getattr(posting, "meta", {}).items())
 
-    # Remove metadata with dunder keys (e.g., __tolerances__) as they contain unhashable
-    # values, and impossible to properly filter anyway.
-    metadata_set = set((k, v) for (k, v) in metadata if not k.startswith("__"))
+    if skip_dunder:
+        # Remove metadata with dunder keys (e.g., __tolerances__) as they contain
+        # unhashable values and are impossible to properly filter via the CLI anyway.
+        metadata = [(k, v) for (k, v) in metadata if not k.startswith("__")]
 
-    return metadata_set
+    if skip_internals:
+        metadata = [(k, v) for (k, v) in metadata if k not in internals_meta]
+
+    return set(metadata)
 
 
 def get_tags(entry: data.Directive, posting_tags_meta=POSTING_TAGS_META) -> set[str]:
@@ -344,12 +357,15 @@ def date_matches(entry: data.Directive, criteria: Iterable[DatePredicate]) -> bo
 
 
 def metadata_matches(
-    entry: data.Directive, criteria: tuple[re.Pattern, re.Pattern]
+    entry: data.Directive,
+    criteria: tuple[re.Pattern, re.Pattern],
+    skip_internals: bool = SKIP_INTERNALS,
 ) -> bool:
     """Check if a Beancount entry matches metadata criteria."""
     (key_re, val_re) = criteria
     return any(
-        key_re.search(k) and val_re.search(str(v)) for (k, v) in get_metadata(entry)
+        key_re.search(k) and val_re.search(str(v))
+        for (k, v) in get_metadata(entry, skip_internals=skip_internals)
     )
 
 
@@ -380,7 +396,10 @@ def type_matches(entry: data.Directive, types: Iterable[type]) -> bool:
 
 
 def entry_matches(
-    entry: data.Directive, criteria: Criteria, posting_tags_meta=POSTING_TAGS_META
+    entry: data.Directive,
+    criteria: Criteria,
+    posting_tags_meta=POSTING_TAGS_META,
+    skip_internals=SKIP_INTERNALS,
 ) -> bool:
     """Check if a Beancount entry matches stated criteria."""
 
@@ -394,7 +413,11 @@ def entry_matches(
     if criteria.date is not None:
         predicates.append(lambda e: date_matches(e, criteria.date))  # type: ignore
     if criteria.metadata is not None:
-        predicates.append(lambda e: metadata_matches(e, criteria.metadata))  # type: ignore  # noqa:E501
+        predicates.append(
+            lambda e: metadata_matches(
+                e, criteria.metadata, skip_internals=skip_internals  # type: ignore
+            )
+        )
     if criteria.narration is not None:
         predicates.append(lambda e: narration_matches(e, criteria.narration))  # type: ignore  # noqa:E501
     if criteria.payee is not None:
@@ -500,10 +523,20 @@ def _build_criteria(
     return criteria
 
 
-def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
+def filter_entries(
+    entries,
+    criteria,
+    posting_tags_meta=POSTING_TAGS_META,
+    skip_internals=SKIP_INTERNALS,
+):
     """Filter entries to only return those that match criteria."""
     for entry in entries:
-        if entry_matches(entry, criteria, posting_tags_meta):
+        if entry_matches(
+            entry,
+            criteria,
+            posting_tags_meta=posting_tags_meta,
+            skip_internals=skip_internals,
+        ):
             logging.debug("Entry %s matches criteria, keeping it", entry)
             yield entry
         else:
@@ -621,6 +654,14 @@ def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
     "Exit succesfully immediately if any match is found.",
 )
 @click.option(
+    "--skip-internals/--no-skip-internals",
+    "skip_internals",
+    default=True,
+    show_default=True,
+    help="When matching, ignore internal information not visible in the ledger. "
+    f"This includes the automatic metadata: {INTERNALS_META}",
+)
+@click.option(
     "-v",
     "--verbose",
     count=True,
@@ -642,6 +683,7 @@ def cli(
     ignore_case,
     posting_tags_meta,
     quiet,
+    skip_internals,
     verbose,
 ):
     match verbose:
@@ -671,7 +713,12 @@ def cli(
     logging.info("Using search criteria: %s", criteria)
 
     match_found = False
-    for entry in filter_entries(ledger[0], criteria, posting_tags_meta):
+    for entry in filter_entries(
+        ledger[0],
+        criteria,
+        posting_tags_meta=posting_tags_meta,
+        skip_internals=skip_internals,
+    ):
         match_found = True
         if quiet:
             break

@@ -194,8 +194,19 @@ def test_metadata_filtering():
         grep_len(l, Criteria(metadata=(re.compile("^name$"), re.compile("Vanguard"))))
         == 3
     )
-    assert (
-        grep_len(l, Criteria(metadata=(re.compile("filename"), re.compile(".*"))))
+    assert (  # filename metadata are skipped by default, hence this returns 0
+        grep_len(l, Criteria(metadata=(re.compile("filename"), re.compile(".*")))) == 0
+    )
+    assert (  # passing skip_internals=False explicitly this time, to match on filename
+        len(
+            list(
+                filter_entries(
+                    l,
+                    Criteria(metadata=(re.compile("filename"), re.compile(".*"))),
+                    skip_internals=False,
+                )
+            )
+        )
         == DIRECTIVES_IN_SAMPLE
     )
     assert (
