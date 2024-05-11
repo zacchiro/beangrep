@@ -12,10 +12,12 @@ from .beangrep import (
     Criteria,
     DatePredicate,
     RelOp,
+    TYPE_SEP,
+    cli,
     filter_entries,
     parse_types,
-    TYPE_SEP,
 )
+from click.testing import CliRunner
 from datetime import date
 from decimal import Decimal
 
@@ -253,3 +255,35 @@ def test_parse_types():
         parse_types("foo")
     with pytest.raises(ValueError):
         parse_types("^%@$#&")
+
+
+def test_cli_basic():
+    runner = CliRunner()
+
+    result = runner.invoke(cli, ["--help"])
+    assert result.exit_code == 0
+    assert result.output.startswith("Usage:")
+
+    result = runner.invoke(cli, ["--foobarbazqux", SAMPLE_LEDGER])  # no such option
+    assert result.exit_code == 2
+
+    result = runner.invoke(cli, ["--date /2024", SAMPLE_LEDGER])  # invalid predicate
+    assert result.exit_code == 2
+
+
+def test_cli_exit_code():
+    runner = CliRunner()
+
+    result = runner.invoke(cli, ["--payee", "Uncle Boons", SAMPLE_LEDGER])
+    assert result.exit_code == 0  # criteria above should match
+    assert "Eating out" in result.output
+
+    # TODO uncomment the following when exit code based on match is implemented
+    # result = runner.invoke(cli, ["--narration", "24kjhkg8sfjh2kjhkjh", SAMPLE_LEDGER])
+    # assert result.exit_code == 1  # criteria above should not match
+
+    # TODO add tests for criteria: account, amount, date, metadata, tag
+
+    # TODO add tests for paramter combinations
+
+    # TODO add tests for -i/--ignore-case
