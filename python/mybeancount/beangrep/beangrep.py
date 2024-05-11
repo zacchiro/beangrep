@@ -512,8 +512,8 @@ def entry_matches(
         predicates.append(lambda e: payee_matches(e, criteria.payee))  # type: ignore
     if criteria.somewhere is not None:
         predicates.append(
-            lambda e: somewhere_matches(  # type: ignore
-                e, criteria.somewhere, posting_tags_meta, skip_internals
+            lambda e: somewhere_matches(
+                e, criteria.somewhere, posting_tags_meta, skip_internals  # type: ignore
             )
         )
     if criteria.tag is not None:
