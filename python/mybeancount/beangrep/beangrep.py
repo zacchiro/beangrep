@@ -11,7 +11,7 @@ import sys
 
 from beancount.core import data  # type: ignore
 from beancount.core.amount import Amount  # type: ignore
-from beancount.parser.printer import print_entry  # type: ignore
+from beancount.parser import printer  # type: ignore
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -233,29 +233,32 @@ class Criteria:
     metadata: Optional[tuple[re.Pattern, re.Pattern]] = None
     narration: Optional[re.Pattern] = None
     payee: Optional[re.Pattern] = None
+    somewhere: Optional[re.Pattern] = None
     tag: Optional[re.Pattern] = None
     types: Optional[set[type]] = None
 
     # TODO add a criteria matching on ^links
 
-    # TODO add a generic criteria matching on any of the above
-
 
 def get_accounts(entry: data.Directive) -> set[str]:
-    """Extract account names referenced from a Beancount directive.
+    """Extract account names referenced from a Beancount entry.
 
     - For transactions, return the name of all accounts in postings.
 
-    - For directives like open, close, etc. return the singleton name of the
-      referenced account.
+    - For pad entries, return the names of both debit and credit accounts.
+
+    - For entries like open, close, etc. return the singleton name of the referenced
+      account.
 
     """
     accounts = []
     match type(entry):
         case (
-            data.Open | data.Close | data.Pad | data.Balance | data.Note | data.Document
+            data.Open | data.Close | data.Balance | data.Note | data.Document
         ) if entry.account is not None:
             accounts.append(entry.account)
+        case data.Pad:
+            accounts.extend([entry.account, entry.source_account])
         case data.Transaction:
             accounts.extend(p.account for p in entry.postings)
 
@@ -263,9 +266,9 @@ def get_accounts(entry: data.Directive) -> set[str]:
 
 
 def get_amounts(entry: data.Directive) -> set[Amount]:
-    """Extract all amounts present in a Beancount directive.
+    """Extract all amounts present in a Beancount entry.
 
-    Amounts are extracted from directives of the following types:
+    Amounts are extracted from entries of the following types:
 
     - Transaction (one amount per Posting)
     - Balance
@@ -283,13 +286,28 @@ def get_amounts(entry: data.Directive) -> set[Amount]:
     return set(amounts)
 
 
+def get_dates(entry: data.Directive) -> set[date]:
+    """Extract all dates present in a Beancount entry.
+
+    Currently this is always a singleton with the entry date, but other dates can be
+    returned in the future (e.g., those stored in custom metadata).
+
+    """
+    return set((entry.date,))
+
+
+def get_narration(entry: data.Directive) -> Optional[str]:
+    """Return the narration of an entry, or None if missing."""
+    return getattr(entry, "narration", None)
+
+
 def get_metadata(
     entry: data.Directive,
     skip_dunder: bool = True,
     skip_internals: bool = SKIP_INTERNALS,
     internals_meta: set[str] = INTERNALS_META,
 ) -> set[tuple[str, str]]:
-    """Extract all key/value metadata pairs attached to a Beancount directive."""
+    """Extract all key/value metadata pairs attached to a Beancount entry."""
 
     metadata = list(getattr(entry, "meta", {}).items())
 
@@ -308,12 +326,17 @@ def get_metadata(
     return set(metadata)
 
 
+def get_payee(entry: data.Directive) -> Optional[str]:
+    """Return the payee of an entry, or None if missing."""
+    return getattr(entry, "payee", None)
+
+
 def get_tags(entry: data.Directive, posting_tags_meta=POSTING_TAGS_META) -> set[str]:
-    """Extract all tags applied to a Beancount directive.
+    """Extract all tags applied to a Beancount entry.
 
     Returned tags include:
 
-    - Tags applied globally to the directive.
+    - Tags applied globally to the entry.
 
     - "Fake" tags applied to transaction postings (as Beancount syntax currently does
       not support tags on postings) using the value associated to the metadata key
@@ -335,6 +358,53 @@ def get_tags(entry: data.Directive, posting_tags_meta=POSTING_TAGS_META) -> set[
     return set(tags)
 
 
+def get_strings(
+    entry: data.Directive,
+    posting_tags_meta=POSTING_TAGS_META,
+    skip_internals=SKIP_INTERNALS,
+    internals_meta=INTERNALS_META,
+) -> set[str]:
+    """Extract all matchable strings from a Beancount entry.
+
+    Strings extracted include: account names, amounts (converted to strings), dates
+    (converted to strings), metadata (both keys and values), narrations and payees (for
+    transactions), tags.
+
+    """
+    strings: set[str] = set()
+
+    strings = strings.union(get_accounts(entry))
+    strings = strings.union(str(a) for a in get_amounts(entry))
+    strings = strings.union(str(d) for d in get_dates(entry))
+    strings = strings.union(
+        set(
+            str(s)
+            for pair in get_metadata(entry, skip_internals=skip_internals)
+            for s in pair
+        )
+    )
+    if (s := get_narration(entry)) is not None:
+        strings.add(s)
+    if (s := get_payee(entry)) is not None:
+        strings.add(s)
+    strings = strings.union(get_tags(entry, posting_tags_meta=posting_tags_meta))
+    strings.add(TYPE_TO_STR[type(entry)])
+    match type(entry):
+        case data.Note:
+            strings.add(entry.comment)
+        case data.Event:
+            strings = strings.union(set([entry.type, entry.description]))
+        case data.Query:
+            strings = strings.union(set([entry.name, entry.query_string]))
+        case data.Document:
+            strings.add(entry.filename)
+        case data.Custom:
+            strings.add(entry.type)
+            strings = strings.union(set(str(v) for v in entry.values))
+
+    return strings
+
+
 def account_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
     """Check if a Beancount entry matches account criteria."""
     return any(criteria.search(a) for a in get_accounts(entry))
@@ -353,7 +423,13 @@ def amount_matches(entry: data.Directive, criteria: Iterable[AmountPredicate]) -
 
 def date_matches(entry: data.Directive, criteria: Iterable[DatePredicate]) -> bool:
     """Check if a Beancount entry matches date criteria."""
-    return all(date_pred.match(entry.date) for date_pred in criteria)
+    # Matching semantics: there exists at least one date that matches all date
+    # predicates. Note: should return False for transactions with no dates.
+    return bool(  # there is at least one date...
+        dates := get_dates(entry)
+    ) and any(  # ... that matches all amount predicates
+        all(date_pred.match(a) for date_pred in criteria) for a in dates
+    )
 
 
 def metadata_matches(
@@ -371,16 +447,28 @@ def metadata_matches(
 
 def narration_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
     """Check if a Beancount entry matches narration criteria."""
-    return hasattr(entry, "narration") and bool(criteria.search(entry.narration))
+    return (s := get_narration(entry)) is not None and bool(criteria.search(s))
 
 
 def payee_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
     """Check if a Beancount entry matches payee criteria."""
-    return (
-        hasattr(entry, "payee")
-        and entry.payee is not None
-        and bool(criteria.search(entry.payee))
+    return (s := get_payee(entry)) is not None and bool(criteria.search(s))
+
+
+def somewhere_matches(
+    entry: data.Directive,
+    criteria: re.Pattern,
+    posting_tags_meta: str = POSTING_TAGS_META,
+    skip_internals: bool = SKIP_INTERNALS,
+) -> bool:
+    """Check if a Beancount entry matches somewhere criteria."""
+    return any(
+        criteria.search(s)
+        for s in get_strings(
+            entry, posting_tags_meta=posting_tags_meta, skip_internals=skip_internals
+        )
     )
+    # return bool(criteria.search(printer.format_entry(entry)))
 
 
 def tag_matches(
@@ -422,6 +510,12 @@ def entry_matches(
         predicates.append(lambda e: narration_matches(e, criteria.narration))  # type: ignore  # noqa:E501
     if criteria.payee is not None:
         predicates.append(lambda e: payee_matches(e, criteria.payee))  # type: ignore
+    if criteria.somewhere is not None:
+        predicates.append(
+            lambda e: somewhere_matches(  # type: ignore
+                e, criteria.somewhere, posting_tags_meta, skip_internals
+            )
+        )
     if criteria.tag is not None:
         predicates.append(lambda e: tag_matches(e, criteria.tag, posting_tags_meta))  # type: ignore  # noqa:E501
     if criteria.types is not None:
@@ -431,6 +525,23 @@ def entry_matches(
     return is_match
 
 
+STR_TO_TYPE: dict[str, type] = {
+    "balance": data.Balance,
+    "close": data.Close,
+    "commodity": data.Commodity,
+    "custom": data.Custom,
+    "document": data.Document,
+    "event": data.Event,
+    "note": data.Note,
+    "open": data.Open,
+    "pad": data.Pad,
+    "price": data.Price,
+    "query": data.Query,
+    "transaction": data.Transaction,
+}
+TYPE_TO_STR: dict[type, str] = dict((v, k) for (k, v) in STR_TO_TYPE.items())
+
+
 def parse_types(types_pat: str) -> set[type]:
     """Parse a directive type pattern.
 
@@ -438,37 +549,14 @@ def parse_types(types_pat: str) -> set[type]:
     "all" to mean all directive types.
 
     """
-    types: list[type] = []
 
     def parse_type(s: str) -> type:
-        match s:
-            case "open":
-                return data.Open
-            case "close":
-                return data.Close
-            case "commodity":
-                return data.Commodity
-            case "pad":
-                return data.Pad
-            case "balance":
-                return data.Balance
-            case "transaction":
-                return data.Transaction
-            case "note":
-                return data.Note
-            case "event":
-                return data.Event
-            case "query":
-                return data.Query
-            case "price":
-                return data.Price
-            case "document":
-                return data.Document
-            case "custom":
-                return data.Custom
-            case _:
-                raise ValueError(f'unknown directive type "{s}"')
+        try:
+            return STR_TO_TYPE[s]
+        except KeyError:
+            raise ValueError(f'unknown directive type "{s}"')
 
+    types: list[type] = []
     if types_pat == "all":
         types = data.ALL_DIRECTIVES
     else:
@@ -484,6 +572,7 @@ def _build_criteria(
     narration_re,
     metadata_pat,
     payee_re,
+    somewhere_re,
     tag_re,
     type_pat,
     ignore_case,
@@ -515,6 +604,8 @@ def _build_criteria(
         criteria.narration = re_compile(narration_re)
     if payee_re is not None:
         criteria.payee = re_compile(payee_re)
+    if somewhere_re is not None:
+        criteria.somewhere = re_compile(somewhere_re)
     if tag_re is not None:
         criteria.tag = re_compile(tag_re)
     if type_pat is not None:
@@ -543,13 +634,8 @@ def filter_entries(
             logging.debug("Entry %s does not match criteria, skipping it", entry)
 
 
-@click.command(
-    help="Search for transactions matching provided criteria in a Beancount ledger."
-)
-@click.argument(
-    "filename",
-    required=True,
-)
+@click.command(help="Search for entries matching given criteria in a Beancount ledger.")
+@click.argument("filename", required=False, default="-")
 @click.option(
     "--account",
     "-a",
@@ -606,6 +692,14 @@ def filter_entries(
     "payee_re",
     metavar="REGEX",
     help="Only return entries whose payees match given regex.",
+)
+@click.option(
+    "--somewhere",
+    "--anywhere",
+    "-s",
+    "somewhere_re",
+    metavar="REGEX",
+    help="Only return entries with a value in them, anywhere, matching given regex.",
 )
 @click.option(
     "--tag",
@@ -676,6 +770,7 @@ def cli(
     narration_re,
     metadata_pat,
     payee_re,
+    somewhere_re,
     tag_re,
     type_pat,
     ignore_case,
@@ -714,6 +809,7 @@ def cli(
             narration_re=narration_re,
             metadata_pat=metadata_pat,
             payee_re=payee_re,
+            somewhere_re=somewhere_re,
             tag_re=tag_re,
             type_pat=type_pat,
             ignore_case=ignore_case,
@@ -734,7 +830,7 @@ def cli(
         if quiet:
             break
         else:
-            print_entry(entry)
+            printer.print_entry(entry)
 
     exit_status = 0 if match_found else 1
     sys.exit(exit_status)

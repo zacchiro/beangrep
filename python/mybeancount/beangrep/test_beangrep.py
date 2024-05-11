@@ -237,6 +237,12 @@ def test_payee_filtering():
     assert grep_len(l, Criteria(payee=re.compile("Cafe Select$"))) == 8
 
 
+def test_somewhere_filtering():
+    l = load_sample_ledger()  # noqa:E741
+    assert grep_len(l, Criteria(somewhere=re.compile("trip-san"))) == 21
+    assert grep_len(l, Criteria(somewhere=re.compile("San Francisco"))) == 1
+
+
 def test_tag_filtering():
     l = load_sample_ledger()  # noqa:E741
     assert grep_len(l, Criteria(tag=re.compile("^trip-new-york-2014$"))) == 45
@@ -326,6 +332,10 @@ def test_cli_exit_code():
     result = runner.invoke(cli, ["--payee", "Uncle Boons", SAMPLE_LEDGER])
     assert result.exit_code == 0
     assert "Eating out" in result.output
+
+    result = runner.invoke(cli, ["--somewhere", "trip-new-york", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "Laut" in result.output
 
     result = runner.invoke(cli, ["--tag", "trip-chicago-2015", SAMPLE_LEDGER])
     assert result.exit_code == 0
