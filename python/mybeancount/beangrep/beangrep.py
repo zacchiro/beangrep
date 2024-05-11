@@ -540,7 +540,7 @@ def filter_entries(
             logging.debug("Entry %s matches criteria, keeping it", entry)
             yield entry
         else:
-            logging.debug("Entry %s does not matche criteria, skipping it", entry)
+            logging.debug("Entry %s does not match criteria, skipping it", entry)
 
 
 @click.command(
@@ -700,15 +700,17 @@ def cli(
             logging.info("Buffering stdin to temporary file %s...", tmpfile.name)
             shutil.copyfileobj(sys.stdin.buffer, tmpfile.file)
             tmpfile.flush()
+            logging.info("Loading ledger from %s...", tmpfile.name)
             ledger = beancount.loader.load_file(tmpfile.name)
     else:
+        logging.info("Loading ledger from %s...", filename)
         ledger = beancount.loader.load_file(filename)
 
     try:
         criteria = _build_criteria(
             account_re=account_re,
-            amount_preds=amount_preds,
-            date_preds=date_preds,
+            amount_preds=(amount_preds if amount_preds else None),
+            date_preds=(date_preds if amount_preds else None),
             narration_re=narration_re,
             metadata_pat=metadata_pat,
             payee_re=payee_re,
@@ -719,6 +721,7 @@ def cli(
     except ValueError as e:
         raise click.UsageError(e.args[0]) from e
     logging.info("Using search criteria: %s", criteria)
+    logging.debug("Input ledger contains %d entries", len(ledger[0]))
 
     match_found = False
     for entry in filter_entries(
