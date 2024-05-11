@@ -510,8 +510,9 @@ def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
             logging.debug("Entry %s does not matche criteria, skipping it", entry)
 
 
-# TODO add brief help message explaining what bean-grep does
-@click.command()
+@click.command(
+    help="Search for transactions matching provided criteria in a Beancount ledger."
+)
 @click.argument(
     # TODO add support for reading from stdin, either implicitly or passing "-"
     "filename",
