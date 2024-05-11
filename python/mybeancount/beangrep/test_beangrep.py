@@ -149,13 +149,13 @@ def test_account_filtering():
 
 def test_amount_filtering():
     l = load_sample_ledger()  # noqa:E741
-    # TODO add tests for multiple amount predicates
     assert grep_len(l, Criteria(amount=[AmountPredicate.parse("=3219.17 USD")])) == 2
     assert grep_len(l, Criteria(amount=[AmountPredicate.parse("3219.17")])) == 2
     assert grep_len(l, Criteria(amount=[AmountPredicate.parse("=3219.17 EUR")])) == 0
     assert grep_len(l, Criteria(amount=[AmountPredicate.parse("76.81 USD")])) == 1
     assert grep_len(l, Criteria(amount=[AmountPredicate.parse(">3000 USD")])) == 29
     assert grep_len(l, Criteria(amount=[AmountPredicate.parse("<1 USD")])) == 1177
+    # TODO add tests for multiple amount predicates
 
 
 def test_date_filtering():
@@ -170,6 +170,8 @@ def test_date_filtering():
     assert grep_len(l, Criteria(date=[DatePredicate.parse("=2030")])) == 1
     assert grep_len(l, Criteria(date=[DatePredicate.parse(">=2029-08")])) == 1
     assert grep_len(l, Criteria(date=[DatePredicate.parse(">2015-12-17")])) == 9
+    assert grep_len(l, Criteria(date=[DatePredicate.parse(">2031")])) == 0
+
     assert (
         grep_len(
             l,
@@ -186,7 +188,6 @@ def test_date_filtering():
         )
         == 0
     )
-    assert grep_len(l, Criteria(date=[DatePredicate.parse(">2031")])) == 0
 
 
 def test_metadata_filtering():
@@ -293,17 +294,54 @@ def test_cli_basic():
 def test_cli_exit_code():
     """Test CLI exit code."""
     runner = CliRunner()
+    result = runner.invoke(
+        cli, ["--account", "Expenses:Food:Restaurant", SAMPLE_LEDGER]
+    )
+    assert result.exit_code == 0
+    assert "Bar Crudo" in result.output
 
-    result = runner.invoke(cli, ["--payee", "Uncle Boons", SAMPLE_LEDGER])
-    assert result.exit_code == 0  # criteria above should match
-    assert "Eating out" in result.output
+    result = runner.invoke(cli, ["--amount", "=76.81 USD", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "Verizon Wireless" in result.output
+
+    result = runner.invoke(cli, ["--date", "=2014-03-28", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "Buying groceries" in result.output
+
+    result = runner.invoke(
+        cli, ["--metadata", "export:CASH", "--type", "commodity", SAMPLE_LEDGER]
+    )
+    assert result.exit_code == 0
+    assert "US Dollar" in result.output
+
+    result = runner.invoke(
+        cli, ["--metadata", "export", "--type", "commodity", SAMPLE_LEDGER]
+    )
+    assert result.exit_code == 0
+    assert "MUTF:VMMXX" in result.output
 
     result = runner.invoke(cli, ["--narration", "24kjhkg8sfjh2kjhkjh", SAMPLE_LEDGER])
-    assert result.exit_code == 1  # criteria above should not match
+    assert result.exit_code == 1
 
-    # TODO add tests for criteria: account, amount, date, metadata, tag
+    result = runner.invoke(cli, ["--payee", "Uncle Boons", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "Eating out" in result.output
 
-    # TODO add tests for criteria combinations
+    result = runner.invoke(cli, ["--tag", "trip-chicago-2015", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "Eataly Chicago" in result.output
+
+    result = runner.invoke(cli, ["--type", "open", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "Federal:PreTax401k" in result.output
+
+    result = runner.invoke(cli, ["--type", "custom", SAMPLE_LEDGER])
+    assert result.exit_code == 1
+
+    result = runner.invoke(cli, ["--type", "balance|query", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "taxes" in result.output
+    assert "PreTax401k" in result.output
 
 
 def test_cli_ignore_case():
