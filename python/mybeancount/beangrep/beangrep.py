@@ -6,6 +6,7 @@ import calendar
 import click
 import logging
 import re
+import shutil
 import sys
 
 from beancount.core import data  # type: ignore
@@ -16,9 +17,8 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 from enum import Enum
+from tempfile import NamedTemporaryFile
 from typing import cast, Optional, Self
-
-DEFAULT_LEDGER = "current.beancount"
 
 KEY_VAL_SEP = ":"
 INTERNALS_META = set(["filename", "lineno"])
@@ -547,10 +547,8 @@ def filter_entries(
     help="Search for transactions matching provided criteria in a Beancount ledger."
 )
 @click.argument(
-    # TODO add support for reading from stdin, either implicitly or passing "-"
     "filename",
-    type=click.Path(exists=True, dir_okay=False),
-    default=DEFAULT_LEDGER,
+    required=True,
 )
 @click.option(
     "--account",
@@ -695,7 +693,17 @@ def cli(
             log_level = logging.DEBUG
     logging.basicConfig(level=log_level)
 
-    ledger = beancount.loader.load_file(filename)
+    if filename == "-":
+        # Beancount does not support streaming reading, so to mimic Unix filter
+        # semantics we read stdin to the end and store it to a temporary file.
+        with NamedTemporaryFile(prefix="beangrep.", suffix=".beancount") as tmpfile:
+            logging.info("Buffering stdin to temporary file %s...", tmpfile.name)
+            shutil.copyfileobj(sys.stdin.buffer, tmpfile.file)
+            tmpfile.flush()
+            ledger = beancount.loader.load_file(tmpfile.name)
+    else:
+        ledger = beancount.loader.load_file(filename)
+
     try:
         criteria = _build_criteria(
             account_re=account_re,

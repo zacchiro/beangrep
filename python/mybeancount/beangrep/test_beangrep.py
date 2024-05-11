@@ -314,3 +314,15 @@ def test_cli_quiet():
     result = runner.invoke(cli, ["--quiet", "--amount", "=76.81 USD", SAMPLE_LEDGER])
     assert result.exit_code == 0
     assert "76.81 USD" not in result.output
+
+
+def test_cli_stdin():
+    """Test reading from stdin passing "-" as filename."""
+    runner = CliRunner()
+    assert runner.invoke(cli, ["-p", "Uncle Boons", SAMPLE_LEDGER]).exit_code == 0
+    with open(SAMPLE_LEDGER) as f:
+        ledger_text = f.read()
+        assert (
+            runner.invoke(cli, ["-p", "Uncle Boons", "-"], input=ledger_text).exit_code
+            == 0
+        )
