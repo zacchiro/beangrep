@@ -61,6 +61,7 @@ _DATE = date(2024, 5, 10)
 
 
 def test_relop():
+    """Test evaluation of relational operators."""
     assert RelOp.EQ.eval(42, 42)
     assert RelOp.LT.eval(41, 42)
     assert RelOp.GT.eval(43, 42)
@@ -71,6 +72,7 @@ def test_relop():
 
 
 def test_relop_parse_error():
+    """Test relational operator parsing errors."""
     with pytest.raises(ValueError):
         assert RelOp.parse("!")
     with pytest.raises(ValueError):
@@ -78,6 +80,7 @@ def test_relop_parse_error():
 
 
 def test_amount_predicate():
+    """Test amount predicate matching."""
     p = AmountPredicate.parse
     assert p("42").match(Amount(Decimal(42), "EUR"))
     assert not p("=42").match(Amount(Decimal(41), "EUR"))
@@ -92,6 +95,7 @@ def test_amount_predicate():
 
 
 def test_amount_predicate_parse_error():
+    """Test amount predicate parse errors."""
     with pytest.raises(ValueError):
         assert AmountPredicate.parse("==42")
     with pytest.raises(ValueError):
@@ -99,6 +103,7 @@ def test_amount_predicate_parse_error():
 
 
 def test_date_predicate():
+    """Test date predicate evaluation."""
     p = DatePredicate.parse
     assert p("=2024").match(date(2024, 5, 10))
     assert not p("2024").match(date(2025, 5, 10))
@@ -116,6 +121,7 @@ def test_date_predicate():
 
 
 def test_date_predicate_parse_error():
+    """Test date predicate prasing errors."""
     with pytest.raises(ValueError):
         assert DatePredicate.parse("==2014")
     with pytest.raises(ValueError):
@@ -247,6 +253,7 @@ def test_type_filtering():
 
 
 def test_parse_types():
+    """Test parsing of entry type names."""
     assert set(parse_types("all")) == set(data.ALL_DIRECTIVES)
     assert set(parse_types(TYPE_SEP.join(["open", "close"]))) == set(
         [data.Open, data.Close]
@@ -269,6 +276,7 @@ def test_parse_types():
 
 
 def test_cli_basic():
+    """Test basic CLI invocation."""
     runner = CliRunner()
 
     result = runner.invoke(cli, ["--help"])
@@ -283,6 +291,7 @@ def test_cli_basic():
 
 
 def test_cli_exit_code():
+    """Test CLI exit code."""
     runner = CliRunner()
 
     result = runner.invoke(cli, ["--payee", "Uncle Boons", SAMPLE_LEDGER])
@@ -298,6 +307,7 @@ def test_cli_exit_code():
 
 
 def test_cli_ignore_case():
+    """Test --ignore-case flag."""
     runner = CliRunner()
     assert runner.invoke(cli, ["-p", "Uncle Boons", SAMPLE_LEDGER]).exit_code == 0
     assert runner.invoke(cli, ["-p", "uncle boons", SAMPLE_LEDGER]).exit_code == 1
@@ -305,6 +315,7 @@ def test_cli_ignore_case():
 
 
 def test_cli_quiet():
+    """Test --quiet flag."""
     runner = CliRunner()
 
     result = runner.invoke(cli, ["--amount", "=76.81 USD", SAMPLE_LEDGER])
