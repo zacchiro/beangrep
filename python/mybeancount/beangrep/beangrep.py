@@ -598,19 +598,27 @@ def filter_entries(entries, criteria, posting_tags_meta=POSTING_TAGS_META):
     "The special value 'all' means: all directive types.",
 )
 @click.option(
-    "-i",
     "--ignore-case/--no-ignore-case",
+    "-i",
     "ignore_case",
     default=False,
     show_default=True,
     help="Ignore case distinctions in string matches.",
 )
-# TODO add grep style -q/--quiet/--silent flag. Note that it impacts exit code.
 @click.option(
     "--posting-tags-meta",
     default=POSTING_TAGS_META,
     show_default=True,
     help="Metadata key used to attach tags to transaction postings.",
+)
+@click.option(
+    "--quiet/--no-quiet",
+    "-q",
+    "quiet",
+    default=False,
+    show_default=True,
+    help="Quiet, do not write anything to standard output. "
+    "Exit succesfully immediately if any match is found.",
 )
 @click.option(
     "-v",
@@ -633,6 +641,7 @@ def cli(
     type_pat,
     ignore_case,
     posting_tags_meta,
+    quiet,
     verbose,
 ):
     match verbose:
@@ -664,7 +673,10 @@ def cli(
     match_found = False
     for entry in filter_entries(ledger[0], criteria, posting_tags_meta):
         match_found = True
-        print_entry(entry)
+        if quiet:
+            break
+        else:
+            print_entry(entry)
 
     exit_status = 0 if match_found else 1
     sys.exit(exit_status)
