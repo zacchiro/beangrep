@@ -278,9 +278,8 @@ def test_cli_exit_code():
     assert result.exit_code == 0  # criteria above should match
     assert "Eating out" in result.output
 
-    # TODO uncomment the following when exit code based on match is implemented
-    # result = runner.invoke(cli, ["--narration", "24kjhkg8sfjh2kjhkjh", SAMPLE_LEDGER])
-    # assert result.exit_code == 1  # criteria above should not match
+    result = runner.invoke(cli, ["--narration", "24kjhkg8sfjh2kjhkjh", SAMPLE_LEDGER])
+    assert result.exit_code == 1  # criteria above should not match
 
     # TODO add tests for criteria: account, amount, date, metadata, tag
 

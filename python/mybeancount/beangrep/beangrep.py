@@ -6,6 +6,7 @@ import calendar
 import click
 import logging
 import re
+import sys
 
 from beancount.core import data
 from beancount.core.amount import Amount
@@ -17,7 +18,6 @@ from decimal import Decimal
 from enum import Enum
 from typing import Optional, Self
 
-# TODO add CLI integration tests
 # TODO make code mypy clean
 
 DEFAULT_LEDGER = "current.beancount"
@@ -654,10 +654,14 @@ def cli(
     except ValueError as e:
         raise click.UsageError(e.args[0]) from e
     logging.info("Using search criteria: %s", criteria)
+
+    match_found = False
     for entry in filter_entries(ledger[0], criteria, posting_tags_meta):
+        match_found = True
         print_entry(entry)
 
-    # TODO set exit code based on match results
+    exit_status = 0 if match_found else 1
+    sys.exit(exit_status)
 
 
 if __name__ == "__main__":
