@@ -1,24 +1,22 @@
 # SPDX-FileCopyrightText: 2024 Stefano Zacchiroli <zack@upsilon.cc>
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-import beancount.loader
+import beancount.loader  # type: ignore
 import calendar
 import click
 import logging
 import re
 import sys
 
-from beancount.core import data
-from beancount.core.amount import Amount
-from beancount.parser.printer import print_entry
+from beancount.core import data  # type: ignore
+from beancount.core.amount import Amount  # type: ignore
+from beancount.parser.printer import print_entry  # type: ignore
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 from enum import Enum
-from typing import Optional, Self
-
-# TODO make code mypy clean
+from typing import cast, Optional, Self
 
 DEFAULT_LEDGER = "current.beancount"
 
@@ -44,32 +42,34 @@ class RelOp(Enum):
 
         """
         match self.value:
-            case self.EQ.value:
-                return lhs == rhs
-            case self.LT.value:
-                return lhs < rhs
-            case self.GT.value:
-                return lhs > rhs
-            case self.LEQ.value:
-                return lhs <= rhs
-            case self.GEQ.value:
-                return lhs >= rhs
+            case RelOp.EQ.value:
+                result = lhs == rhs
+            case RelOp.LT.value:
+                result = lhs < rhs
+            case RelOp.GT.value:
+                result = lhs > rhs
+            case RelOp.LEQ.value:
+                result = lhs <= rhs
+            case RelOp.GEQ.value:
+                result = lhs >= rhs
+        return result
 
     @classmethod
     def parse(cls, s: str) -> Self:
         match s:
             case "=":
-                return cls.EQ
+                result = cls.EQ
             case "<":
-                return cls.LT
+                result = cls.LT
             case ">":
-                return cls.GT
+                result = cls.GT
             case "<=":
-                return cls.LEQ
+                result = cls.LEQ
             case ">=":
-                return RelOp.GEQ
+                result = cls.GEQ
             case _:
                 raise ValueError(f'invalid comparison operator "{s}"')
+        return cast(Self, result)
 
 
 @dataclass
@@ -112,7 +112,7 @@ class AmountPredicate:
         if "number" in matches:
             matches["number"] = Decimal(matches["number"])
 
-        return cls(**matches)
+        return cls(**matches)  # type: ignore  # too dynamic to type properly
 
 
 @dataclass
@@ -136,30 +136,31 @@ class DatePredicate:
         None is returned to denote that there is no min/max.
 
         """
+        r: tuple[Optional[date], Optional[date]] = (None, None)
         match (self.year, self.month, self.day, self.comp):
             # constraints: year only
             case (y, None, None, RelOp.LT) if y is not None:
-                return (None, date(y - 1, 12, 31))
+                r = (None, date(y - 1, 12, 31))
             case (y, None, None, RelOp.LEQ) if y is not None:
-                return (None, date(y, 12, 31))
+                r = (None, date(y, 12, 31))
             case (y, None, None, RelOp.EQ) if y is not None:
-                return (date(y, 1, 1), date(y, 12, 31))
+                r = (date(y, 1, 1), date(y, 12, 31))
             case (y, None, None, RelOp.GEQ) if y is not None:
-                return (date(y, 1, 1), None)
+                r = (date(y, 1, 1), None)
             case (y, None, None, RelOp.GT) if y is not None:
-                return (date(y + 1, 1, 1), None)
+                r = (date(y + 1, 1, 1), None)
 
             # constraints: year and month
             case (y, m, None, RelOp.LT) if y is not None and m is not None:
-                return (None, date(y, m, 1) - timedelta(days=1))
+                r = (None, date(y, m, 1) - timedelta(days=1))
             case (y, m, None, RelOp.LEQ) if y is not None and m is not None:
-                return (None, date(y, m, calendar.monthrange(y, m)[1]))
+                r = (None, date(y, m, calendar.monthrange(y, m)[1]))
             case (y, m, None, RelOp.EQ) if y is not None and m is not None:
-                return (date(y, m, 1), date(y, m, calendar.monthrange(y, m)[1]))
+                r = (date(y, m, 1), date(y, m, calendar.monthrange(y, m)[1]))
             case (y, m, None, RelOp.GEQ) if y is not None and m is not None:
-                return (date(y, m, 1), None)
+                r = (date(y, m, 1), None)
             case (y, m, None, RelOp.GT) if y is not None and m is not None:
-                return (
+                r = (
                     date(y, m, calendar.monthrange(y, m)[1]) + timedelta(days=1),
                     None,
                 )
@@ -168,20 +169,22 @@ class DatePredicate:
             # fmt: off
             case (y, m, d, RelOp.LT) \
                     if y is not None and m is not None and d is not None:
-                return (None, date(y, m, d) - timedelta(days=1))
+                r = (None, date(y, m, d) - timedelta(days=1))
             case (y, m, d, RelOp.LEQ) \
                     if y is not None and m is not None and d is not None:
-                return (None, date(y, m, d))
+                r = (None, date(y, m, d))
             case (y, m, d, RelOp.EQ) \
                     if y is not None and m is not None and d is not None:
-                return (date(y, m, d), date(y, m, d))
+                r = (date(y, m, d), date(y, m, d))
             case (y, m, d, RelOp.GEQ) \
                     if y is not None and m is not None and d is not None:
-                return (date(y, m, d), None)
+                r = (date(y, m, d), None)
             case (y, m, d, RelOp.GT) \
                     if y is not None and m is not None and d is not None:
-                return (date(y, m, d) + timedelta(days=1), None)
+                r = (date(y, m, d) + timedelta(days=1), None)
             # fmt: on
+
+        return r
 
     def match(self, date: date) -> bool:
         """Test if a date matches the date predicate."""
@@ -215,7 +218,7 @@ class DatePredicate:
             if k in matches:
                 matches[k] = int(matches[k])
 
-        return cls(**matches)
+        return cls(**matches)  # type: ignore  # too dynamic to type properly
 
 
 @dataclass
@@ -287,9 +290,9 @@ def get_metadata(entry: data.Directive) -> set[tuple[str, str]]:
 
     # Remove metadata with dunder keys (e.g., __tolerances__) as they contain unhashable
     # values, and impossible to properly filter anyway.
-    metadata = set((k, v) for (k, v) in metadata if not k.startswith("__"))
+    metadata_set = set((k, v) for (k, v) in metadata if not k.startswith("__"))
 
-    return metadata
+    return metadata_set
 
 
 def get_tags(entry: data.Directive, posting_tags_meta=POSTING_TAGS_META) -> set[str]:
@@ -352,7 +355,7 @@ def metadata_matches(
 
 def narration_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
     """Check if a Beancount entry matches narration criteria."""
-    return hasattr(entry, "narration") and criteria.search(entry.narration)
+    return hasattr(entry, "narration") and bool(criteria.search(entry.narration))
 
 
 def payee_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
@@ -360,7 +363,7 @@ def payee_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
     return (
         hasattr(entry, "payee")
         and entry.payee is not None
-        and criteria.search(entry.payee)
+        and bool(criteria.search(entry.payee))
     )
 
 
@@ -382,22 +385,24 @@ def entry_matches(
     """Check if a Beancount entry matches stated criteria."""
 
     predicates = []
-    if criteria.account:
-        predicates.append(lambda e: account_matches(e, criteria.account))
-    if criteria.amount:
-        predicates.append(lambda e: amount_matches(entry, criteria.amount))
-    if criteria.date:
-        predicates.append(lambda e: date_matches(e, criteria.date))
-    if criteria.metadata:
-        predicates.append(lambda e: metadata_matches(e, criteria.metadata))
-    if criteria.narration:
-        predicates.append(lambda e: narration_matches(e, criteria.narration))
-    if criteria.payee:
-        predicates.append(lambda e: payee_matches(e, criteria.payee))
-    if criteria.tag:
-        predicates.append(lambda e: tag_matches(e, criteria.tag, posting_tags_meta))
-    if criteria.types:
-        predicates.append(lambda e: type_matches(entry, criteria.types))
+    # ignoring types below because mypy fails to understand criteria fields are not None
+    # inside lambdas, in spite of the explicit `is not None` guard
+    if criteria.account is not None:
+        predicates.append(lambda e: account_matches(e, criteria.account))  # type: ignore  # noqa:E501
+    if criteria.amount is not None:
+        predicates.append(lambda e: amount_matches(e, criteria.amount))  # type: ignore
+    if criteria.date is not None:
+        predicates.append(lambda e: date_matches(e, criteria.date))  # type: ignore
+    if criteria.metadata is not None:
+        predicates.append(lambda e: metadata_matches(e, criteria.metadata))  # type: ignore  # noqa:E501
+    if criteria.narration is not None:
+        predicates.append(lambda e: narration_matches(e, criteria.narration))  # type: ignore  # noqa:E501
+    if criteria.payee is not None:
+        predicates.append(lambda e: payee_matches(e, criteria.payee))  # type: ignore
+    if criteria.tag is not None:
+        predicates.append(lambda e: tag_matches(e, criteria.tag, posting_tags_meta))  # type: ignore  # noqa:E501
+    if criteria.types is not None:
+        predicates.append(lambda e: type_matches(entry, criteria.types))  # type: ignore
 
     is_match = all(p(entry) for p in predicates)
     return is_match
@@ -410,7 +415,7 @@ def parse_types(types_pat: str) -> set[type]:
     "all" to mean all directive types.
 
     """
-    types: Optional[list[type]] = None
+    types: list[type] = []
 
     def parse_type(s: str) -> type:
         match s:
