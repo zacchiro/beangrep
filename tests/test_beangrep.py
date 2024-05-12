@@ -4,12 +4,13 @@ __copyright__ = "Copyright (C) 2024  Stefano Zacchiroli <zack@upsilon.cc>"
 __license__ = "GPL-2.0-or-later"
 
 import beancount.loader  # type: ignore
+import beangrep
 import re
 import pytest
 
 from beancount.core import data  # type: ignore
 from beancount.core.amount import Amount  # type: ignore
-from .beangrep import (
+from beangrep import (
     AmountPredicate,
     Criteria,
     DatePredicate,
@@ -22,8 +23,11 @@ from .beangrep import (
 from click.testing import CliRunner
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
-SAMPLE_LEDGER = "testdata/example.beancount"
+SAMPLE_LEDGER = (
+    Path(beangrep.__file__).parents[2] / "tests" / "data" / "example.beancount"
+)
 DIRECTIVES_IN_SAMPLE = 2247  # `bean-quey example.beancount` shows this
 
 _META = data.new_metadata("beangrep/test_beangrep.py", 1234)
