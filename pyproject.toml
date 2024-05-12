@@ -19,8 +19,8 @@ classifiers = [
     "Topic :: Text Processing :: General",
 ]
 dependencies = [
-    "beancount",
-    "click",
+    "beancount>=2.3.5",
+    "click>=8.1",
 ]
 # version = "0.1.0"
 dynamic = [ "version" ]
