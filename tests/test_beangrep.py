@@ -25,7 +25,7 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
-SAMPLE_LEDGER = (
+SAMPLE_LEDGER = str(
     Path(beangrep.__file__).parents[2] / "tests" / "data" / "example.beancount"
 )
 DIRECTIVES_IN_SAMPLE = 2247  # `bean-quey example.beancount` shows this
