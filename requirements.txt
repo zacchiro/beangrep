@@ -1,2 +1,0 @@
-beancount >=2.3.4
-click >7.0
