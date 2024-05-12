@@ -811,6 +811,12 @@ def cli(
         logging.info("Loading ledger from %s...", filename)
         ledger = beancount.loader.load_file(filename)
 
+    if ledger[1]:  # fail upon Beancount loading error(s)
+        raise click.FileError(
+            filename,
+            "\nBeancount load error(s):\n" + "\n".join(str(err) for err in ledger[1]),
+        )
+
     try:
         criteria = _build_criteria(
             account_re=account_re,
