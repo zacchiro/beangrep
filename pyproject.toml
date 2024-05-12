@@ -31,3 +31,10 @@ Issues = "https://github.com/zacchiro/beangrep/issues"
 
 [project.scripts]
 bean-grep = "beangrep:cli"
+
+[project.optional-dependencies]
+# dev = []
+test = [
+    "pytest>=7.2",
+    "pytest-cov>=4",
+]
