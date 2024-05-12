@@ -33,8 +33,9 @@ Issues = "https://github.com/zacchiro/beangrep/issues"
 bean-grep = "beangrep:cli"
 
 [project.optional-dependencies]
-# dev = []
-test = [
+dev = [
+    "black>=23.1",
+    "mypy>=1.0",
     "pytest>=7.2",
     "pytest-cov>=4",
 ]
