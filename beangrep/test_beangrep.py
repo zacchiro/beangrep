@@ -1,5 +1,7 @@
 # SPDX-FileCopyrightText: 2024 Stefano Zacchiroli <zack@upsilon.cc>
 # SPDX-License-Identifier: GPL-2.0-or-later
+__copyright__ = "Copyright (C) 2024  Stefano Zacchiroli <zack@upsilon.cc>"
+__license__ = "GPL-2.0-or-later"
 
 import beancount.loader  # type: ignore
 import re
@@ -21,7 +23,7 @@ from click.testing import CliRunner
 from datetime import date
 from decimal import Decimal
 
-SAMPLE_LEDGER = "example.beancount"
+SAMPLE_LEDGER = "testdata/example.beancount"
 DIRECTIVES_IN_SAMPLE = 2247  # `bean-quey example.beancount` shows this
 
 _META = data.new_metadata("beangrep/test_beangrep.py", 1234)
