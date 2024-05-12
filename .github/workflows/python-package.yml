@@ -42,4 +42,4 @@ jobs:
         mypy src/ tests/
     - name: Test with pytest
       run: |
-        pytest
+        PYTHONPATH=src/ pytest
