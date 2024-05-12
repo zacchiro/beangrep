@@ -1,3 +1,6 @@
+![CI status](https://github.com/zacchiro/beangrep/actions/workflows/python-package.yml/badge.svg)
+
+
 Beangrep - grep-like filter for Beancount
 =========================================
 
