@@ -3,4 +3,6 @@
 __copyright__ = "Copyright (C) 2024  Stefano Zacchiroli <zack@upsilon.cc>"
 __license__ = "GPL-2.0-or-later"
 
-from .beangrep import *
+from setuptools import setup
+
+setup()
