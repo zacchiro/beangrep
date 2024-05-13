@@ -161,7 +161,18 @@ def test_amount_filtering():
     assert grep_len(l, Criteria(amount=[AmountPredicate.parse("76.81 USD")])) == 1
     assert grep_len(l, Criteria(amount=[AmountPredicate.parse(">3000 USD")])) == 29
     assert grep_len(l, Criteria(amount=[AmountPredicate.parse("<1 USD")])) == 1177
-    # TODO add tests for multiple amount predicates
+    assert (
+        grep_len(
+            l,
+            Criteria(
+                amount=[
+                    AmountPredicate.parse(">2800 USD"),
+                    AmountPredicate.parse("<3000 USD"),
+                ]
+            ),
+        )
+        == 8
+    )
 
 
 def test_date_filtering():
