@@ -10,7 +10,14 @@ authors = [
 description = "Grep-like filter for the Beancount plain text accounting system"
 readme = "README.md"
 requires-python = ">=3.11"
-keywords = ["accounting", "ledger", "beancount", "grep", "plaintext"]
+keywords = [
+    "accounting",
+    "beancount",
+    "grep",
+    "ledger",
+    "plaintext",
+    "plaintext-accounting",
+]
 license = { text = "GPL-2.0-or-later" }
 classifiers = [
     "Programming Language :: Python :: 3",
