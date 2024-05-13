@@ -19,7 +19,7 @@ Installation
 $ python3 -m venv ./venv    # optional but recommended
 $ source venv/bin/activate
 
-(venv) $ pip install beangrep
+$ pip install beangrep
 [...]
 Successfully installed beancount-2.3.6 beangrep-...
 
@@ -37,7 +37,7 @@ $ cd beangrep
 $ python3 -m venv ./venv    # optional but recommended
 $ source venv/bin/activate
 
-(venv) $ pip install -e .
+$ pip install -e .
 [...]
 Successfully installed beancount-2.3.6 beangrep-...
 
