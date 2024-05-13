@@ -13,7 +13,22 @@ Beangrep - grep-like filter for Beancount
 Installation
 ------------
 
-### Installing from source
+### Prebuilt package
+
+```console
+$ python3 -m venv ./venv    # optional but recommended
+$ source venv/bin/activate
+
+(venv) $ pip install beangrep
+[...]
+Successfully installed beancount-2.3.6 beangrep-...
+
+$ bean-grep --help
+Usage: bean-grep [OPTIONS] FILENAME
+[...]
+```
+
+### From source
 
 ```console
 $ git clone https://github.com/zacchiro/beangrep
@@ -21,8 +36,9 @@ $ cd beangrep
 
 $ python3 -m venv ./venv    # optional but recommended
 $ source venv/bin/activate
+
 (venv) $ pip install -e .
-...
+[...]
 Successfully installed beancount-2.3.6 beangrep-...
 
 $ bean-grep --help
