@@ -107,12 +107,12 @@ Options:
                                   matching given regex. The tag can be located
                                   anywhere.
   -T, --type TYPE(S)              Only return entries of certain types. Types
-                                  are specified as a '|'-separated list of
+                                  are specified as a ','-separated list of
                                   type names; type names are: open, close,
                                   commodity, pad, balance, transaction, note,
                                   event, query, price, document, custom. The
                                   special value 'all' means: all directive
-                                  types.  [default: transaction]
+                                  types. [default: transaction]
   -i, --ignore-case / --no-ignore-case
                                   Ignore case distinctions in string matches.
                                   [default: no-ignore-case]
@@ -124,7 +124,7 @@ Options:
   --skip-internals / --no-skip-internals
                                   When matching, ignore internal information
                                   not visible in the ledger. This includes the
-                                  automatic metadata: {'filename', 'lineno'}
+                                  automatic metadata: ['filename', 'lineno']
                                   [default: skip-internals]
   -v, --verbose                   Increase logging verbosity. Default level is
                                   WARNING. Passing this option once (e.g., -v)

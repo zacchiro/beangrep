@@ -783,7 +783,7 @@ def filter_entries(
     default=True,
     show_default=True,
     help="When matching, ignore internal information not visible in the ledger. "
-    f"This includes the automatic metadata: {INTERNALS_META}",
+    f"This includes the automatic metadata: {sorted(INTERNALS_META)}",
 )
 @click.option(
     "-v",
