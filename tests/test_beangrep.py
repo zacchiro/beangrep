@@ -3,27 +3,28 @@
 __copyright__ = "Copyright (C) 2024  Stefano Zacchiroli <zack@upsilon.cc>"
 __license__ = "GPL-2.0-or-later"
 
-import beancount.loader  # type: ignore
-import beangrep
 import re
-import pytest
+from datetime import date
+from decimal import Decimal
+from pathlib import Path
 
+import beancount.loader  # type: ignore
+import pytest
 from beancount.core import data  # type: ignore
 from beancount.core.amount import Amount  # type: ignore
+from click.testing import CliRunner
+
+import beangrep
 from beangrep import (
+    TYPE_SEP,
     AmountPredicate,
     Criteria,
     DatePredicate,
     RelOp,
-    TYPE_SEP,
     cli,
     filter_entries,
     parse_types,
 )
-from click.testing import CliRunner
-from datetime import date
-from decimal import Decimal
-from pathlib import Path
 
 SAMPLE_LEDGER = str(
     Path(beangrep.__file__).parents[2] / "tests" / "data" / "example.beancount"
@@ -263,13 +264,17 @@ def test_payee_filtering():
 
 def test_somewhere_filtering():
     l = load_sample_ledger()  # noqa:E741
-    assert grep_len(l, Criteria(somewhere=re.compile("^Transfering"))) == 9  # txn narration  # noqa:E501
+    assert (
+        grep_len(l, Criteria(somewhere=re.compile("^Transfering"))) == 9
+    )  # txn narration
     assert grep_len(l, Criteria(somewhere=re.compile("^Cafe"))) == 59  # txn payee
     assert grep_len(l, Criteria(somewhere=re.compile("trip-san"))) == 21  # txn tag
     assert grep_len(l, Criteria(somewhere=re.compile("^a-day-in"))) == 6  # txn link
     assert grep_len(l, Criteria(somewhere=re.compile("2015-05-01"))) == 6  # txn date
     assert grep_len(l, Criteria(somewhere=re.compile("3219.17 USD"))) == 2  # txn amount
-    assert grep_len(l, Criteria(somewhere=re.compile("San Francisco"))) == 1  # event descr.  # noqa:E501
+    assert (
+        grep_len(l, Criteria(somewhere=re.compile("San Francisco"))) == 1
+    )  # event description
 
 
 def test_tag_filtering():

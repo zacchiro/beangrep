@@ -3,24 +3,24 @@
 __copyright__ = "Copyright (C) 2024  Stefano Zacchiroli <zack@upsilon.cc>"
 __license__ = "GPL-2.0-or-later"
 
-import beancount.loader  # type: ignore
 import calendar
-import click
 import logging
 import re
 import shutil
 import sys
-
-from beancount.core import data  # type: ignore
-from beancount.core.amount import Amount  # type: ignore
-from beancount.parser import printer  # type: ignore
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 from enum import Enum
 from tempfile import NamedTemporaryFile
-from typing import cast, Optional, Self
+from typing import Optional, Self, cast
+
+import beancount.loader  # type: ignore
+import click
+from beancount.core import data  # type: ignore
+from beancount.core.amount import Amount  # type: ignore
+from beancount.parser import printer  # type: ignore
 
 KEY_VAL_SEP = ":"
 INTERNALS_META = set(["filename", "lineno"])
@@ -278,7 +278,7 @@ def get_amounts(entry: data.Directive) -> set[Amount]:
     """
     amounts = []
     match type(entry):
-        case (data.Balance | data.Price):
+        case data.Balance | data.Price:
             if hasattr(entry, "amount"):
                 amounts.append(entry.amount)
         case data.Transaction:
