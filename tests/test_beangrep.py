@@ -447,3 +447,9 @@ def test_cli_stdin():
             runner.invoke(cli, ["-p", "Uncle Boons", "-"], input=ledger_text).exit_code
             == 0
         )
+
+
+@pytest.mark.skip(reason="should override click exit code when exceptions bubble up")
+def test_cli_file_error():
+    runner = CliRunner()
+    assert runner.invoke(cli, ["does_not_exist_asklahkj15.beancount"]).exit_code == 2
