@@ -263,8 +263,13 @@ def test_payee_filtering():
 
 def test_somewhere_filtering():
     l = load_sample_ledger()  # noqa:E741
-    assert grep_len(l, Criteria(somewhere=re.compile("trip-san"))) == 21
-    assert grep_len(l, Criteria(somewhere=re.compile("San Francisco"))) == 1
+    assert grep_len(l, Criteria(somewhere=re.compile("^Transfering"))) == 9  # txn narration  # noqa:E501
+    assert grep_len(l, Criteria(somewhere=re.compile("^Cafe"))) == 59  # txn payee
+    assert grep_len(l, Criteria(somewhere=re.compile("trip-san"))) == 21  # txn tag
+    assert grep_len(l, Criteria(somewhere=re.compile("^a-day-in"))) == 6  # txn link
+    assert grep_len(l, Criteria(somewhere=re.compile("2015-05-01"))) == 6  # txn date
+    assert grep_len(l, Criteria(somewhere=re.compile("3219.17 USD"))) == 2  # txn amount
+    assert grep_len(l, Criteria(somewhere=re.compile("San Francisco"))) == 1  # event descr.  # noqa:E501
 
 
 def test_tag_filtering():
