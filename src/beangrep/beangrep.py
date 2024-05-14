@@ -238,7 +238,59 @@ class Criteria:
     payee: Optional[re.Pattern] = None
     somewhere: Optional[re.Pattern] = None
     tag: Optional[re.Pattern] = None
-    types: Optional[set[type]] = None
+    types: Optional[frozenset[type]] = frozenset([data.Transaction])
+
+    @classmethod
+    def build(
+        cls,
+        account_re,
+        amount_preds,
+        date_preds,
+        link_re,
+        metadata_pat,
+        narration_re,
+        payee_re,
+        somewhere_re,
+        tag_re,
+        type_pat,
+        ignore_case,
+    ) -> Self:
+        """Build a Criteria object from command line arguments."""
+        re_flags = 0
+        if ignore_case:
+            re_flags = re.IGNORECASE
+
+        def re_compile(s):
+            return re.compile(s, flags=re_flags)
+
+        criteria = cls()
+
+        if account_re is not None:
+            criteria.account = re_compile(account_re)
+        if amount_preds is not None:
+            criteria.amount = list(map(AmountPredicate.parse, amount_preds))
+        if date_preds is not None:
+            criteria.date = list(map(DatePredicate.parse, date_preds))
+        if link_re is not None:
+            criteria.link = re_compile(link_re)
+        if metadata_pat is not None:
+            if KEY_VAL_SEP in metadata_pat:
+                (key_re, val_re) = metadata_pat.split(KEY_VAL_SEP, maxsplit=1)
+            else:
+                (key_re, val_re) = (metadata_pat, META_VAL_RE)
+            criteria.metadata = (re_compile(key_re), re_compile(val_re))
+        if narration_re is not None:
+            criteria.narration = re_compile(narration_re)
+        if payee_re is not None:
+            criteria.payee = re_compile(payee_re)
+        if somewhere_re is not None:
+            criteria.somewhere = re_compile(somewhere_re)
+        if tag_re is not None:
+            criteria.tag = re_compile(tag_re)
+        if type_pat is not None:
+            criteria.types = parse_types(type_pat)
+
+        return criteria
 
 
 def get_accounts(entry: data.Directive) -> set[str]:
@@ -557,7 +609,7 @@ STR_TO_TYPE: dict[str, type] = {
 TYPE_TO_STR: dict[type, str] = dict((v, k) for (k, v) in STR_TO_TYPE.items())
 
 
-def parse_types(types_pat: str) -> set[type]:
+def parse_types(types_pat: str) -> frozenset[type]:
     """Parse a directive type pattern.
 
     A type pattern is a list of type names separated by TYPE_SEP, or the special value
@@ -577,59 +629,7 @@ def parse_types(types_pat: str) -> set[type]:
     else:
         types = [parse_type(s) for s in types_pat.strip().split(TYPE_SEP)]
 
-    return set(types)
-
-
-def _build_criteria(
-    account_re,
-    amount_preds,
-    date_preds,
-    link_re,
-    metadata_pat,
-    narration_re,
-    payee_re,
-    somewhere_re,
-    tag_re,
-    type_pat,
-    ignore_case,
-) -> Criteria:
-    """Build a Criteria object from command line arguments."""
-
-    re_flags = 0
-    if ignore_case:
-        re_flags = re.IGNORECASE
-
-    def re_compile(s):
-        return re.compile(s, flags=re_flags)
-
-    criteria = Criteria()
-
-    if account_re is not None:
-        criteria.account = re_compile(account_re)
-    if amount_preds is not None:
-        criteria.amount = list(map(AmountPredicate.parse, amount_preds))
-    if date_preds is not None:
-        criteria.date = list(map(DatePredicate.parse, date_preds))
-    if link_re is not None:
-        criteria.link = re_compile(link_re)
-    if metadata_pat is not None:
-        if KEY_VAL_SEP in metadata_pat:
-            (key_re, val_re) = metadata_pat.split(KEY_VAL_SEP, maxsplit=1)
-        else:
-            (key_re, val_re) = (metadata_pat, META_VAL_RE)
-        criteria.metadata = (re_compile(key_re), re_compile(val_re))
-    if narration_re is not None:
-        criteria.narration = re_compile(narration_re)
-    if payee_re is not None:
-        criteria.payee = re_compile(payee_re)
-    if somewhere_re is not None:
-        criteria.somewhere = re_compile(somewhere_re)
-    if tag_re is not None:
-        criteria.tag = re_compile(tag_re)
-    if type_pat is not None:
-        criteria.types = parse_types(type_pat)
-
-    return criteria
+    return frozenset(types)
 
 
 def filter_entries(
@@ -746,14 +746,13 @@ def filter_entries(
     "--type",
     "-T",
     "type_pat",
-    default="transaction",
-    show_default=True,
     metavar="TYPE(S)",
     help="Only return entries of certain types. "
     f"Types are specified as a '{TYPE_SEP}'-separated list of type names; "
     "type names are: open, close, commodity, pad, balance, transaction, "
     "note, event, query, price, document, custom. "
-    "The special value 'all' means: all directive types.",
+    "The special value 'all' means: all directive types. "
+    "[default: transaction]",
 )
 @click.option(
     "--ignore-case/--no-ignore-case",
@@ -842,10 +841,10 @@ def cli(
         )
 
     try:
-        criteria = _build_criteria(
+        criteria = Criteria.build(
             account_re=account_re,
-            amount_preds=(amount_preds if amount_preds else None),
-            date_preds=(date_preds if amount_preds else None),
+            amount_preds=(amount_preds or None),
+            date_preds=(date_preds or None),
             link_re=link_re,
             metadata_pat=metadata_pat,
             narration_re=narration_re,
