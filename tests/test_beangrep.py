@@ -410,7 +410,7 @@ def test_cli_exit_code():
     result = runner.invoke(cli, ["--type", "custom", SAMPLE_LEDGER])
     assert result.exit_code == 1
 
-    result = runner.invoke(cli, ["--type", "balance|query", SAMPLE_LEDGER])
+    result = runner.invoke(cli, ["--type", "balance,query", SAMPLE_LEDGER])
     assert result.exit_code == 0
     assert "taxes" in result.output
     assert "PreTax401k" in result.output

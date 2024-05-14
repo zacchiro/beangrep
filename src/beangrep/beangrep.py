@@ -28,7 +28,7 @@ META_VAL_RE = ".*"
 POSTING_TAGS_META = "tags"
 POSTING_TAGS_SEP = ","
 SKIP_INTERNALS = True
-TYPE_SEP = "|"
+TYPE_SEP = ","
 
 
 class RelOp(Enum):
