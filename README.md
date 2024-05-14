@@ -86,6 +86,8 @@ Options:
                                   the form YYYY-[MM[-DD]]. Multiple date
                                   predicates can be given to express complex
                                   date ranges.
+  -l, --link REGEX                Only return entries with at least one link
+                                  matching given regex.
   -m, --meta, --metadata REGEX[:REGEX]
                                   Only return entries with at least one
                                   metadata key/value pair matching given
