@@ -207,6 +207,13 @@ def test_date_filtering():
     )
 
 
+def test_link_filtering():
+    l = load_sample_ledger()  # noqa:E741
+    assert grep_len(l, Criteria(link=re.compile("day-in-sfo"))) == 2
+    assert grep_len(l, Criteria(link=re.compile("day-in-chicago"))) == 4
+    assert grep_len(l, Criteria(link=re.compile("^a-day-in-"))) == 2 + 4
+
+
 def test_metadata_filtering():
     l = load_sample_ledger()  # noqa:E741
     assert (
@@ -330,6 +337,10 @@ def test_cli_exit_code():
     result = runner.invoke(cli, ["--date", "=2014-03-28", SAMPLE_LEDGER])
     assert result.exit_code == 0
     assert "Buying groceries" in result.output
+
+    result = runner.invoke(cli, ["--link", "^a-day-in", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "Mercadito" in result.output
 
     result = runner.invoke(
         cli, ["--metadata", "export:CASH", "--type", "commodity", SAMPLE_LEDGER]

@@ -232,14 +232,13 @@ class Criteria:
     account: Optional[re.Pattern] = None
     amount: Optional[list[AmountPredicate]] = None
     date: Optional[list[DatePredicate]] = None
+    link: Optional[re.Pattern] = None
     metadata: Optional[tuple[re.Pattern, re.Pattern]] = None
     narration: Optional[re.Pattern] = None
     payee: Optional[re.Pattern] = None
     somewhere: Optional[re.Pattern] = None
     tag: Optional[re.Pattern] = None
     types: Optional[set[type]] = None
-
-    # TODO add a criteria matching on ^links
 
 
 def get_accounts(entry: data.Directive) -> set[str]:
@@ -296,6 +295,12 @@ def get_dates(entry: data.Directive) -> set[date]:
 
     """
     return set((entry.date,))
+
+
+def get_links(entry: data.Directive) -> set[str]:
+    """Return the links of an entry, or the empty set if missing."""
+    return set(getattr(entry, "links", set()))
+    # note: without outer `set()` in some cases we would return frozenset-s
 
 
 def get_narration(entry: data.Directive) -> Optional[str]:
@@ -378,6 +383,7 @@ def get_strings(
     strings = strings.union(get_accounts(entry))
     strings = strings.union(str(a) for a in get_amounts(entry))
     strings = strings.union(str(d) for d in get_dates(entry))
+    strings = strings.union(get_links(entry))
     strings = strings.union(
         set(
             str(s)
@@ -432,6 +438,11 @@ def date_matches(entry: data.Directive, criteria: Iterable[DatePredicate]) -> bo
     ) and any(  # ... that matches all amount predicates
         all(date_pred.match(a) for date_pred in criteria) for a in dates
     )
+
+
+def link_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
+    """Check if a Beancount entry matches links criteria."""
+    return any(criteria.search(link) for link in get_links(entry))
 
 
 def metadata_matches(
@@ -502,6 +513,8 @@ def entry_matches(
         predicates.append(lambda e: amount_matches(e, criteria.amount))  # type: ignore
     if criteria.date is not None:
         predicates.append(lambda e: date_matches(e, criteria.date))  # type: ignore
+    if criteria.link is not None:
+        predicates.append(lambda e: link_matches(e, criteria.link))  # type: ignore
     if criteria.metadata is not None:
         predicates.append(
             lambda e: metadata_matches(
@@ -571,8 +584,9 @@ def _build_criteria(
     account_re,
     amount_preds,
     date_preds,
-    narration_re,
+    link_re,
     metadata_pat,
+    narration_re,
     payee_re,
     somewhere_re,
     tag_re,
@@ -596,6 +610,8 @@ def _build_criteria(
         criteria.amount = list(map(AmountPredicate.parse, amount_preds))
     if date_preds is not None:
         criteria.date = list(map(DatePredicate.parse, date_preds))
+    if link_re is not None:
+        criteria.link = re_compile(link_re)
     if metadata_pat is not None:
         if KEY_VAL_SEP in metadata_pat:
             (key_re, val_re) = metadata_pat.split(KEY_VAL_SEP, maxsplit=1)
@@ -677,6 +693,13 @@ def filter_entries(
     "(one of '<', '<=', '=', '>=', '>', with '=' being the default), "
     "and is followed by a date in the form YYYY-[MM[-DD]]. "
     "Multiple date predicates can be given to express complex date ranges.",
+)
+@click.option(
+    "--link",
+    "-l",
+    "link_re",
+    metavar="REGEX",
+    help="Only return entries with at least one link matching given regex.",
 )
 @click.option(
     "--meta",
@@ -777,8 +800,9 @@ def cli(
     account_re,
     amount_preds,
     date_preds,
-    narration_re,
+    link_re,
     metadata_pat,
+    narration_re,
     payee_re,
     somewhere_re,
     tag_re,
@@ -822,8 +846,9 @@ def cli(
             account_re=account_re,
             amount_preds=(amount_preds if amount_preds else None),
             date_preds=(date_preds if amount_preds else None),
-            narration_re=narration_re,
+            link_re=link_re,
             metadata_pat=metadata_pat,
+            narration_re=narration_re,
             payee_re=payee_re,
             somewhere_re=somewhere_re,
             tag_re=tag_re,

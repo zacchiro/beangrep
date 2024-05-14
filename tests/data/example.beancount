@@ -1261,11 +1261,11 @@ option "operating_currency" "USD"
   Liabilities:US:Chase:Slate                        -5.98 USD
   Expenses:Food:Coffee                               5.98 USD
 
-2013-06-20 * "Pizza Delfina" "" #trip-san-francisco-2013
+2013-06-20 * "Pizza Delfina" "" #trip-san-francisco-2013 ^a-day-in-sfo
   Liabilities:US:Chase:Slate                       -17.65 USD
   Expenses:Food:Restaurant                          17.65 USD
 
-2013-06-20 * "Mission Chinese Food" "" #trip-san-francisco-2013
+2013-06-20 * "Mission Chinese Food" "" #trip-san-francisco-2013 ^a-day-in-sfo
   Liabilities:US:Chase:Slate                       -30.97 USD
   Expenses:Food:Restaurant                          30.97 USD
 
@@ -2671,19 +2671,19 @@ option "operating_currency" "USD"
   Liabilities:US:Chase:Slate                        -5.31 USD
   Expenses:Food:Coffee                               5.31 USD
 
-2015-02-21 * "Mercadito" "" #trip-chicago-2015
+2015-02-21 * "Mercadito" "" #trip-chicago-2015 ^a-day-in-chicago
   Liabilities:US:Chase:Slate                       -43.53 USD
   Expenses:Food:Restaurant                          43.53 USD
 
-2015-02-21 * "25 Degrees Burger Bar" "" #trip-chicago-2015
+2015-02-21 * "25 Degrees Burger Bar" "" #trip-chicago-2015 ^a-day-in-chicago
   Liabilities:US:Chase:Slate                       -22.76 USD
   Expenses:Food:Restaurant                          22.76 USD
 
-2015-02-21 * "Another Sports Pub" "" #trip-chicago-2015
+2015-02-21 * "Another Sports Pub" "" #trip-chicago-2015 ^a-day-in-chicago
   Liabilities:US:Chase:Slate                       -10.57 USD
   Expenses:Food:Alcohol                             10.57 USD
 
-2015-02-21 * "Argo Tea" "" #trip-chicago-2015
+2015-02-21 * "Argo Tea" "" #trip-chicago-2015 ^a-day-in-chicago
   Liabilities:US:Chase:Slate                        -6.12 USD
   Expenses:Food:Coffee                               6.12 USD
 
