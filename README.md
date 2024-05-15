@@ -131,6 +131,9 @@ Options:
                                   will increase it to INFO, twice or more
                                   (e.g., -vv) to DEBUG.
   --help                          Show this message and exit.
+
+  Exit status is 0 (sucess) if a match is found, 1 if no match is found, 2 if
+  an error occurred.
 ```
 
 

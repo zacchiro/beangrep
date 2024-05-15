@@ -659,7 +659,9 @@ def filter_entries(
     "full transactions, balances, notes, etc. By default only transactions are returned"
     "; use the --type/-T option to override.\n\n"
     'To read from standard input, pass "-" as FILENAME, but beware that it implies '
-    "on-disk buffering of stdin."
+    "on-disk buffering of stdin.",
+    epilog="Exit status is 0 (sucess) if a match is found, "
+    "1 if no match is found, 2 if an error occurred.",
 )
 @click.argument("filename", required=True)
 @click.option(
@@ -794,7 +796,9 @@ def filter_entries(
     "Passing this option once (e.g., -v) will increase it to INFO, "
     "twice or more (e.g., -vv) to DEBUG.",
 )
+@click.pass_context
 def cli(
+    ctx,
     filename,
     account_re,
     amount_preds,
@@ -835,9 +839,9 @@ def cli(
         ledger = beancount.loader.load_file(filename)
 
     if ledger[1]:  # fail upon Beancount loading error(s)
-        raise click.FileError(
-            filename,
-            "\nBeancount load error(s):\n" + "\n".join(str(err) for err in ledger[1]),
+        raise click.BadArgumentUsage(
+            f'\nBeancount encountered error(s) when loading "{filename}":\n'
+            + "\n".join(str(err) for err in ledger[1]),
         )
 
     try:
