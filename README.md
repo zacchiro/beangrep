@@ -174,5 +174,5 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 A copy of the GNU General Public License is [distributed with Beangrep][gpl2-here]
 as well as from the [official license page][gpl2-home].
 
-[gpl2-here]: ./LICENSE-GPL-2.0-or-later
+[gpl2-here]: https://github.com/zacchiro/beangrep/blob/main/LICENSE-GPL-2.0-or-later
 [gpl2-home]: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
