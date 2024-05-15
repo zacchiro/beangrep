@@ -144,9 +144,6 @@ Options:
 
   Exit status is 0 (sucess) if a match is found, 1 if no match is found, 2 if
   an error occurred.
-
-  Exit status is 0 (sucess) if a match is found, 1 if no match is found, 2 if
-  an error occurred.
 ```
 
 

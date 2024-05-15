@@ -7,7 +7,7 @@ set -e
 
 readme=README.md
 usage_begin_line=$(grep --line-number "Usage: bean-grep" "$readme" | tail -n 1 | cut -f 1 -d:)
-usage_end_line=$(grep --line-number "Show this message and exit" "$readme" | tail -n 1 | cut -f 1 -d:)
+usage_end_line=$(grep --line-number "an error occurred" "$readme" | tail -n 1 | cut -f 1 -d:)
 
 new_readme="${readme}.new"
 head -n $(( "$usage_begin_line" - 1 )) "$readme" > "$new_readme"
