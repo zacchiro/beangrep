@@ -240,6 +240,49 @@ class Criteria:
     tag: Optional[re.Pattern] = None
     types: Optional[frozenset[type]] = frozenset([data.Transaction])
 
+    @staticmethod
+    def _re_compile(ignore_case: bool, s: str) -> re.Pattern:
+        """Compile a regex, ignoring case or not."""
+        re_flags = 0
+        if ignore_case:
+            re_flags = re.IGNORECASE
+
+        return re.compile(s, flags=re_flags)
+
+    @classmethod
+    def guess(
+        cls, pattern: str, ignore_case: bool = False, base: Optional[Self] = None
+    ) -> Self:
+        """Guess criteria from a single textual pattern, using heuristics.
+
+        Heuristics (ordered by priority):
+
+        - "YYYY-MM-DD" -> date criteria
+        - "#tag" -> tag criteria
+        - "^link" -> link criteria
+        - "key:value" -> metadata criteria
+        - default -> somewhere criteria
+
+        """
+        criteria = base if base is not None else cls()
+
+        if re.search(r"^\d{4}-\d{2}-\d{2}$", pattern):
+            criteria.date = [DatePredicate.parse(f"={pattern}")]
+        elif re.search(r"^#[-\w]+$", pattern):
+            criteria.tag = cls._re_compile(ignore_case, pattern[1:])
+        elif re.search(r"^\^[-\w]+$", pattern):
+            criteria.link = cls._re_compile(ignore_case, pattern[1:])
+        elif m := re.search(r"(?P<key>\w+):(?P<val>\w+)$", pattern):
+            matches = m.groupdict()
+            criteria.metadata = (
+                cls._re_compile(ignore_case, matches["key"]),
+                cls._re_compile(ignore_case, matches["val"]),
+            )
+        else:
+            criteria.somewhere = cls._re_compile(ignore_case, pattern)
+
+        return criteria
+
     @classmethod
     def build(
         cls,
@@ -254,39 +297,36 @@ class Criteria:
         tag_re,
         type_pat,
         ignore_case,
+        base: Optional[Self] = None,
     ) -> Self:
-        """Build a Criteria object from command line arguments."""
-        re_flags = 0
-        if ignore_case:
-            re_flags = re.IGNORECASE
-
-        def re_compile(s):
-            return re.compile(s, flags=re_flags)
-
-        criteria = cls()
+        """Build criteria from command line arguments."""
+        criteria = base if base is not None else cls()
 
         if account_re is not None:
-            criteria.account = re_compile(account_re)
+            criteria.account = cls._re_compile(ignore_case, account_re)
         if amount_preds is not None:
             criteria.amount = list(map(AmountPredicate.parse, amount_preds))
         if date_preds is not None:
             criteria.date = list(map(DatePredicate.parse, date_preds))
         if link_re is not None:
-            criteria.link = re_compile(link_re)
+            criteria.link = cls._re_compile(ignore_case, link_re)
         if metadata_pat is not None:
             if KEY_VAL_SEP in metadata_pat:
                 (key_re, val_re) = metadata_pat.split(KEY_VAL_SEP, maxsplit=1)
             else:
                 (key_re, val_re) = (metadata_pat, META_VAL_RE)
-            criteria.metadata = (re_compile(key_re), re_compile(val_re))
+            criteria.metadata = (
+                cls._re_compile(ignore_case, key_re),
+                cls._re_compile(ignore_case, val_re),
+            )
         if narration_re is not None:
-            criteria.narration = re_compile(narration_re)
+            criteria.narration = cls._re_compile(ignore_case, narration_re)
         if payee_re is not None:
-            criteria.payee = re_compile(payee_re)
+            criteria.payee = cls._re_compile(ignore_case, payee_re)
         if somewhere_re is not None:
-            criteria.somewhere = re_compile(somewhere_re)
+            criteria.somewhere = cls._re_compile(ignore_case, somewhere_re)
         if tag_re is not None:
-            criteria.tag = re_compile(tag_re)
+            criteria.tag = cls._re_compile(ignore_case, tag_re)
         if type_pat is not None:
             criteria.types = parse_types(type_pat)
 
@@ -654,16 +694,33 @@ def filter_entries(
 
 @click.command(
     help="Search for entries matching given criteria in a Beancount ledger. "
-    "Pretty print matching entries to standard output.\n\n"
+    "Pretty print matching entries to standard output."
+    "\n\n"
+    "Search criteria can be specified with the options below and/or providing an "
+    'explicit ("smart") PATTERN. If given, PATTERN is interpreted either as a date '
+    '(if it is in the "YYYY-MM-DD" format), tag ("#tag"), link ("^link"), metadata '
+    'pair ("key:value"), or string to be matched anywhere (see -s/--somewhere below), '
+    "in this order. "
+    "If PATTERN is not given, search criteria are defined by explicit options. "
+    "\n\n"
+    "Multiple options and/or PATTERN are logically joined (AND-ed) together. "
+    "In case of overlap, explicit options override PATTERN. "
+    "\n\n"
     "The granularity of matching (and results) is that of individual entries, e.g., "
     "full transactions, balances, notes, etc. By default only transactions are returned"
-    "; use the --type/-T option to override.\n\n"
+    "; use the --type/-T option to override."
+    "\n\n"
     'To read from standard input, pass "-" as FILENAME, but beware that it implies '
     "on-disk buffering of stdin.",
     epilog="Exit status is 0 (sucess) if a match is found, "
     "1 if no match is found, 2 if an error occurred.",
 )
-@click.argument("filename", required=True)
+@click.argument("pattern", required=False)
+@click.argument(
+    "filename",
+    required=False,
+    metavar="FILENAME",  # override metavar to show this as actually required
+)
 @click.option(
     "--account",
     "-a",
@@ -799,6 +856,7 @@ def filter_entries(
 @click.pass_context
 def cli(
     ctx,
+    pattern,
     filename,
     account_re,
     amount_preds,
@@ -825,7 +883,16 @@ def cli(
             log_level = logging.DEBUG
     logging.basicConfig(level=log_level)
 
-    if filename == "-":
+    if filename is None and pattern is not None:
+        # Usage is "bean-grep [PATTERN] FILENAME", with both PATTERN and FILENAME
+        # declared as optional for click. Click assigns arguments to variables
+        # sequentially from left to right, so when only one is given, it is interpreted
+        # as PATTERN, rather than FILENAME. We hence swap them here.
+        (pattern, filename) = (filename, pattern)
+
+    if filename is None:  # Manual check, as we want filename to be required=False
+        raise click.UsageError("Missing argument 'FILENAME'.")
+    elif filename == "-":
         # Beancount does not support streaming reading, so to mimic Unix filter
         # semantics we read stdin to the end and store it to a temporary file.
         with NamedTemporaryFile(prefix="beangrep.", suffix=".beancount") as tmpfile:
@@ -838,14 +905,17 @@ def cli(
         logging.info("Loading ledger from %s...", filename)
         ledger = beancount.loader.load_file(filename)
 
-    if ledger[1]:  # fail upon Beancount loading error(s)
+    if ledger[1]:  # Beancount encountered loading error(s), fail with diagnostic
         raise click.BadArgumentUsage(
             f'\nBeancount encountered error(s) when loading "{filename}":\n'
             + "\n".join(str(err) for err in ledger[1]),
         )
 
     try:
-        criteria = Criteria.build(
+        criteria = Criteria()  # start from default criteria
+        if pattern is not None:  # override with smart pattern, if given as argument
+            criteria = Criteria.guess(pattern, ignore_case, base=criteria)
+        criteria = Criteria.build(  # override with explicit options, if any
             account_re=account_re,
             amount_preds=(amount_preds or None),
             date_preds=(date_preds or None),
@@ -857,6 +927,7 @@ def cli(
             tag_re=tag_re,
             type_pat=type_pat,
             ignore_case=ignore_case,
+            base=criteria,
         )
     except ValueError as e:
         raise click.UsageError(e.args[0]) from e
@@ -877,7 +948,7 @@ def cli(
             printer.print_entry(entry)
 
     exit_status = 0 if match_found else 1
-    sys.exit(exit_status)
+    ctx.exit(exit_status)
 
 
 if __name__ == "__main__":

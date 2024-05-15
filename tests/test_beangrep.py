@@ -137,6 +137,23 @@ def test_date_predicate_parse_error():
         assert DatePredicate.parse("/2014-01")
 
 
+def test_pattern_guessing():
+    assert Criteria.guess("2024-05-15").date == [DatePredicate.parse("=2024-05-15")]
+    assert Criteria.guess("2024-05").date is None
+    assert Criteria.guess("2024").date is None
+
+    assert Criteria.guess("#some-tag").tag == re.compile("some-tag")
+    assert Criteria.guess("some-tag").tag is None
+
+    assert Criteria.guess("^some-link").link == re.compile("some-link")
+    assert Criteria.guess("some-link").link is None
+
+    assert Criteria.guess("key:val").metadata == (re.compile("key"), re.compile("val"))
+    assert Criteria.guess("key val").metadata is None
+
+    assert Criteria.guess("some text").somewhere == (re.compile("some text"))
+
+
 def load_sample_ledger(filename=SAMPLE_LEDGER):
     """Test helper to load a sample ledger from file."""
     return beancount.loader.load_file(filename)[0]
@@ -341,7 +358,6 @@ def test_parse_types():
 def test_cli_basic():
     """Test basic CLI invocation."""
     runner = CliRunner()
-
     result = runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
     assert result.output.startswith("Usage:")
@@ -351,6 +367,8 @@ def test_cli_basic():
 
     result = runner.invoke(cli, ["--date /2024", SAMPLE_LEDGER])  # invalid predicate
     assert result.exit_code == 2
+
+    assert runner.invoke(cli, []).exit_code == 2
 
 
 def test_cli_exit_code():
@@ -390,6 +408,9 @@ def test_cli_exit_code():
 
     result = runner.invoke(cli, ["--narration", "24kjhkg8sfjh2kjhkjh", SAMPLE_LEDGER])
     assert result.exit_code == 1
+    result = runner.invoke(cli, ["--narration", "Buying groceries", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "Onion Market" in result.output
 
     result = runner.invoke(cli, ["--payee", "Uncle Boons", SAMPLE_LEDGER])
     assert result.exit_code == 0
@@ -416,6 +437,31 @@ def test_cli_exit_code():
     assert "PreTax401k" in result.output
 
 
+def test_cli_smart_pattern():
+    runner = CliRunner()
+    result = runner.invoke(cli, ["2014-03-28", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "Buying groceries" in result.output
+
+    result = runner.invoke(cli, ["#trip-chicago-2015", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "Eataly Chicago" in result.output
+
+    result = runner.invoke(cli, ["^a-day-in", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "Mercadito" in result.output
+
+    result = runner.invoke(cli, ["--type", "commodity", "export:CASH", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "US Dollar" in result.output
+
+    result = runner.invoke(cli, ["Buying groceries", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "Onion Market" in result.output
+    result = runner.invoke(cli, ["24kjhkg8sfjh2kjhkjh", SAMPLE_LEDGER])
+    assert result.exit_code == 1
+
+
 def test_cli_ignore_case():
     """Test --ignore-case flag."""
     runner = CliRunner()
@@ -427,7 +473,6 @@ def test_cli_ignore_case():
 def test_cli_quiet():
     """Test --quiet flag."""
     runner = CliRunner()
-
     result = runner.invoke(cli, ["--amount", "=76.81 USD", SAMPLE_LEDGER])
     assert result.exit_code == 0
     assert "76.81 USD" in result.output

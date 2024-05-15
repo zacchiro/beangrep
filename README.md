@@ -53,10 +53,20 @@ Usage
 The CLI says it all when invoked as `bean-grep --help`:
 
 ```
-Usage: bean-grep [OPTIONS] FILENAME
+Usage: bean-grep [OPTIONS] [PATTERN] FILENAME
 
   Search for entries matching given criteria in a Beancount ledger. Pretty
   print matching entries to standard output.
+
+  Search criteria can be specified with the options below and/or providing an
+  explicit ("smart") PATTERN. If given, PATTERN is interpreted either as a
+  date (if it is in the "YYYY-MM-DD" format), tag ("#tag"), link ("^link"),
+  metadata pair ("key:value"), or string to be matched anywhere (see
+  -s/--somewhere below), in this order. If PATTERN is not given, search
+  criteria are defined by explicit options.
+
+  Multiple options and/or PATTERN are logically joined (AND-ed) together. In
+  case of overlap, explicit options override PATTERN.
 
   The granularity of matching (and results) is that of individual entries,
   e.g., full transactions, balances, notes, etc. By default only transactions
@@ -131,6 +141,9 @@ Options:
                                   will increase it to INFO, twice or more
                                   (e.g., -vv) to DEBUG.
   --help                          Show this message and exit.
+
+  Exit status is 0 (sucess) if a match is found, 1 if no match is found, 2 if
+  an error occurred.
 
   Exit status is 0 (sucess) if a match is found, 1 if no match is found, 2 if
   an error occurred.
