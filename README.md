@@ -129,7 +129,7 @@ Options:
   --posting-tags-meta TEXT        Metadata key used to attach tags to
                                   transaction postings.  [default: tags]
   -q, --quiet / --no-quiet        Quiet, do not write anything to standard
-                                  output. Exit succesfully immediately if any
+                                  output. Exit successfully immediately if any
                                   match is found.  [default: no-quiet]
   --skip-internals / --no-skip-internals
                                   When matching, ignore internal information
@@ -142,7 +142,7 @@ Options:
                                   (e.g., -vv) to DEBUG.
   --help                          Show this message and exit.
 
-  Exit status is 0 (sucess) if a match is found, 1 if no match is found, 2 if
+  Exit status is 0 (success) if a match is found, 1 if no match is found, 2 if
   an error occurred.
 ```
 
