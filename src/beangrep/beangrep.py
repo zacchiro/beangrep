@@ -712,7 +712,7 @@ def filter_entries(
     "\n\n"
     'To read from standard input, pass "-" as FILENAME, but beware that it implies '
     "on-disk buffering of stdin.",
-    epilog="Exit status is 0 (sucess) if a match is found, "
+    epilog="Exit status is 0 (success) if a match is found, "
     "1 if no match is found, 2 if an error occurred.",
 )
 @click.argument("pattern", required=False)
@@ -834,7 +834,7 @@ def filter_entries(
     default=False,
     show_default=True,
     help="Quiet, do not write anything to standard output. "
-    "Exit succesfully immediately if any match is found.",
+    "Exit successfully immediately if any match is found.",
 )
 @click.option(
     "--skip-internals/--no-skip-internals",
