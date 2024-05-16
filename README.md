@@ -53,9 +53,9 @@ Usage
 The CLI says it all when invoked as `bean-grep --help`:
 
 ```
-Usage: bean-grep [OPTIONS] [PATTERN] FILENAME
+Usage: bean-grep [OPTIONS] [PATTERN] FILENAME...
 
-  Search for entries matching given criteria in a Beancount ledger. Pretty
+  Search for entries matching given criteria in Beancount journals. Pretty
   print matching entries to standard output.
 
   Search criteria can be specified with the options below and/or providing an

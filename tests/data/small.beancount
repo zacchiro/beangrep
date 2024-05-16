@@ -1,0 +1,16 @@
+2024-05-11 open Assets:Checking
+2024-05-11 open Equity:Opening-Balances
+2024-05-11 open Expenses:Grocery
+2024-05-11 open Income:Salary
+
+2024-05-12 * "Opening balance"
+    Assets:Checking                                                12.34 EUR
+    Equity:Opening-Balances
+
+2024-05-12 * "Salary"
+    Income:Salary                                                 -13.37 EUR
+    Assets:Checking
+
+2024-05-13 * "Grocery"
+    Expenses:Grocery                                                3.45 EUR
+    Assets:Checking

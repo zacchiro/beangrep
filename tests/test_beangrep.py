@@ -26,9 +26,9 @@ from beangrep import (
     parse_types,
 )
 
-SAMPLE_LEDGER = str(
-    Path(beangrep.__file__).parents[2] / "tests" / "data" / "example.beancount"
-)
+DATA_DIR = Path(beangrep.__file__).parents[2] / "tests" / "data"
+SAMPLE_LEDGER = str(DATA_DIR / "example.beancount")
+SAMPLE_LEDGER_SMALL = str(DATA_DIR / "small.beancount")
 DIRECTIVES_IN_SAMPLE = 2247  # `bean-quey example.beancount` shows this
 
 
@@ -270,6 +270,9 @@ def test_somewhere_filtering():
         grep_len(l, mk_criteria(somewhere=re.compile("^Transfering"))) == 9
     )  # txn narration
     assert grep_len(l, mk_criteria(somewhere=re.compile("^Cafe"))) == 59  # txn payee
+    assert (
+        grep_len(l, mk_criteria(somewhere=re.compile("US:Federal"))) == 94
+    )  # txn account
     assert grep_len(l, mk_criteria(somewhere=re.compile("trip-san"))) == 21  # txn tag
     assert grep_len(l, mk_criteria(somewhere=re.compile("^a-day-in"))) == 6  # txn link
     assert grep_len(l, mk_criteria(somewhere=re.compile("2015-05-01"))) == 6  # txn date
@@ -341,6 +344,23 @@ def test_cli_basic():
     assert result.exit_code == 2
 
     assert runner.invoke(cli, []).exit_code == 2
+    assert runner.invoke(cli, ["pattern", "-", "-"]).exit_code == 2  # stdin twice
+
+
+def test_cli_multiple_files():
+    runner = CliRunner()
+    result = runner.invoke(cli, ["Opening", SAMPLE_LEDGER, SAMPLE_LEDGER_SMALL])
+    assert result.exit_code == 0
+    assert "Assets:US:BofA:Checking" in result.output  # hit in SAMPLE_LEDGER
+    assert "Assets:Checking" in result.output  # hit in SAMPLE_LEDGER_SMALL
+
+    result = runner.invoke(cli, ["no such text", SAMPLE_LEDGER, SAMPLE_LEDGER_SMALL])
+    assert result.exit_code == 1
+
+    result = runner.invoke(cli, ["Opening Balance", SAMPLE_LEDGER, SAMPLE_LEDGER_SMALL])
+    assert result.exit_code == 0  # hit in SAMPLE_LEDGER
+    result = runner.invoke(cli, ["Opening balance", SAMPLE_LEDGER, SAMPLE_LEDGER_SMALL])
+    assert result.exit_code == 0  # hit in SAMPLE_LEDGER_SMALL
 
 
 def test_cli_exit_code():

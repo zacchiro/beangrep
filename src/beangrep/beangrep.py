@@ -696,7 +696,7 @@ def filter_entries(
 
 
 @click.command(
-    help="Search for entries matching given criteria in a Beancount ledger. "
+    help="Search for entries matching given criteria in Beancount journals. "
     "Pretty print matching entries to standard output."
     "\n\n"
     "Search criteria can be specified with the options below and/or providing an "
@@ -719,11 +719,11 @@ def filter_entries(
     epilog="Exit status is 0 (success) if a match is found, "
     "1 if no match is found, 2 if an error occurred.",
 )
-@click.argument("pattern", required=False)
 @click.argument(
-    "filename",
-    required=False,
-    metavar="FILENAME",  # override metavar to show this as actually required
+    "args",
+    required=True,
+    nargs=-1,
+    metavar="[PATTERN] FILENAME...",  # override metavar to show what is required
 )
 @click.option(
     "--account",
@@ -859,8 +859,7 @@ def filter_entries(
 @click.pass_context
 def cli(
     ctx,
-    pattern,
-    filename,
+    args,
     account_re,
     amount_preds,
     date_preds,
@@ -886,32 +885,14 @@ def cli(
             log_level = logging.DEBUG
     logging.basicConfig(level=log_level)
 
-    if filename is None and pattern is not None:
-        # Usage is "bean-grep [PATTERN] FILENAME", with both PATTERN and FILENAME
-        # declared as optional for click. Click assigns arguments to variables
-        # sequentially from left to right, so when only one is given, it is interpreted
-        # as PATTERN, rather than FILENAME. We hence swap them here.
-        (pattern, filename) = (filename, pattern)
-
-    if filename is None:  # Manual check, as we want filename to be required=False
-        raise click.UsageError("Missing argument 'FILENAME'.")
-    elif filename == "-":
-        # Beancount does not support streaming reading, so to mimic Unix filter
-        # semantics we read stdin to the end and store it to a temporary file.
-        with NamedTemporaryFile(prefix="beangrep.", suffix=".beancount") as tmpfile:
-            logging.info("Buffering stdin to temporary file %s...", tmpfile.name)
-            shutil.copyfileobj(sys.stdin.buffer, tmpfile.file)
-            tmpfile.flush()
-            logging.info("Loading ledger from %s...", tmpfile.name)
-            ledger = beancount.loader.load_file(tmpfile.name)
-    else:
-        logging.info("Loading ledger from %s...", filename)
-        ledger = beancount.loader.load_file(filename)
-
-    if ledger[1]:  # Beancount encountered loading error(s), fail with diagnostic
+    (pattern, filenames) = (None, [])
+    if len(args) == 1:  # len(args) == 0 should not happen due to required=True
+        filenames = list(args)
+    elif len(args) >= 2:
+        (pattern, filenames) = (args[0], list(args[1:]))
+    if len(list(filter(lambda fname: fname == "-", filenames))) > 1:
         raise click.BadArgumentUsage(
-            f'\nBeancount encountered error(s) when loading "{filename}":\n'
-            + "\n".join(str(err) for err in ledger[1]),
+            'Standard input ("-") cannot be specified multipled times'
         )
 
     try:
@@ -935,20 +916,40 @@ def cli(
     except ValueError as e:
         raise click.UsageError(e.args[0]) from e
     logging.info("Using search criteria: %s", criteria)
-    logging.debug("Input ledger contains %d entries", len(ledger[0]))
 
     match_found = False
-    for entry in filter_entries(
-        ledger[0],
-        criteria,
-        posting_tags_meta=posting_tags_meta,
-        skip_internals=skip_internals,
-    ):
-        match_found = True
-        if quiet:
-            break
+    for filename in filenames:
+        if filename == "-":
+            # Beancount does not support streaming reading, so to mimic Unix filter
+            # semantics we read stdin to the end and store it to a temporary file.
+            with NamedTemporaryFile(prefix="beangrep.", suffix=".beancount") as tmpfile:
+                logging.info("Buffering stdin to temporary file %s...", tmpfile.name)
+                shutil.copyfileobj(sys.stdin.buffer, tmpfile.file)
+                tmpfile.flush()
+                logging.info("Loading ledger from %s...", tmpfile.name)
+                ledger = beancount.loader.load_file(tmpfile.name)
         else:
-            printer.print_entry(entry)
+            logging.info("Loading ledger from %s...", filename)
+            ledger = beancount.loader.load_file(filename)
+
+        if ledger[1]:  # Beancount encountered loading error(s), fail with diagnostic
+            raise click.BadArgumentUsage(
+                f'\nBeancount encountered error(s) when loading "{filename}":\n'
+                + "\n".join(str(err) for err in ledger[1]),
+            )
+        logging.debug("Input ledger contains %d entries", len(ledger[0]))
+
+        for entry in filter_entries(
+            ledger[0],
+            criteria,
+            posting_tags_meta=posting_tags_meta,
+            skip_internals=skip_internals,
+        ):
+            match_found = True
+            if quiet:
+                break
+            else:
+                printer.print_entry(entry)
 
     exit_status = 0 if match_found else 1
     ctx.exit(exit_status)
