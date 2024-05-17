@@ -428,6 +428,15 @@ def test_cli_exit_code():
     assert "taxes" in result.output
     assert "PreTax401k" in result.output
 
+    result = runner.invoke(
+        cli, ["--type", "pad,document,note,custom", SAMPLE_LEDGER_SMALL]
+    )
+    assert result.exit_code == 0
+    assert "Rounding-Error" in result.output  # pad hit
+    assert "statements.txt" in result.output  # document hit
+    assert "YAY" in result.output  # note hit
+    assert "TRUE" in result.output  # custom hit
+
 
 def test_cli_smart_pattern():
     runner = CliRunner()

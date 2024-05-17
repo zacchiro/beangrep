@@ -1,16 +1,29 @@
 2024-05-11 open Assets:Checking
 2024-05-11 open Equity:Opening-Balances
+2024-05-11 open Equity:Rounding-Error
 2024-05-11 open Expenses:Grocery
+2024-05-11 open Expenses:Taxes
 2024-05-11 open Income:Salary
 
+2024-05-11 document Income:Salary "documents/statements.txt"
+
+2024-05-11 custom "budget" TRUE 42.00 EUR
+
 2024-05-12 * "Opening balance"
-    Assets:Checking                                                12.34 EUR
+    Assets:Checking                                                12.32 EUR
     Equity:Opening-Balances
 
-2024-05-12 * "Salary"
-    Income:Salary                                                 -13.37 EUR
-    Assets:Checking
+2024-05-12 pad Assets:Checking Equity:Rounding-Error
 
-2024-05-13 * "Grocery"
+2024-05-13 balance Assets:Checking  12.34 EUR
+
+2024-05-14 note Income:Salary "My first salary, YAY!"
+
+2024-05-14 * "Salary"
+    Income:Salary                                                 -13.37 EUR
+    Expenses:Taxes                                                  3.37 EUR
+    Assets:Checking                                                10.00 EUR
+
+2024-05-15 * "Grocery"
     Expenses:Grocery                                                3.45 EUR
     Assets:Checking
