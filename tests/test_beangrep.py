@@ -470,6 +470,9 @@ def test_cli_stdin():
         )
 
 
-def test_cli_file_error():
+def test_cli_errors():
     runner = CliRunner()
-    assert runner.invoke(cli, ["does_not_exist_asklahkj15.beancount"]).exit_code == 2
+    assert runner.invoke(cli, ["does_not_exist.beancount"]).exit_code == 2
+    assert (
+        runner.invoke(cli, ["--amount", "%23 USD", SAMPLE_LEDGER]).exit_code == 2
+    )  # invalid amount predicate
