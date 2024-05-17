@@ -260,6 +260,7 @@ class Criteria:
         - "YYYY-MM-DD" -> date criteria
         - "#tag" -> tag criteria
         - "^link" -> link criteria
+        - starting with an account type (Assets, Liabilities, etc.) -> account criteria
         - "key:value" -> metadata criteria
         - default -> somewhere criteria
 
@@ -272,6 +273,8 @@ class Criteria:
             criteria.tag = cls._re_compile(ignore_case, pattern[1:])
         elif re.search(r"^\^[-\w]+$", pattern):
             criteria.link = cls._re_compile(ignore_case, pattern[1:])
+        elif re.search(r"^(Assets|Liabilities|Equity|Income|Expenses)", pattern):
+            criteria.account = cls._re_compile(ignore_case, pattern)
         elif m := re.search(r"(?P<key>\w+):(?P<val>\w+)$", pattern):
             matches = m.groupdict()
             criteria.metadata = (
@@ -698,8 +701,9 @@ def filter_entries(
     "\n\n"
     "Search criteria can be specified with the options below and/or providing an "
     'explicit ("smart") PATTERN. If given, PATTERN is interpreted either as a date '
-    '(if it is in the "YYYY-MM-DD" format), tag ("#tag"), link ("^link"), metadata '
-    'pair ("key:value"), or string to be matched anywhere (see -s/--somewhere below), '
+    '(if it is in the "YYYY-MM-DD" format), tag ("#tag"), link ("^link"), account '
+    '(start with an account type, e.g., "Assets", "Income", etc.), metadata pair '
+    '("key:value"), or string to be matched anywhere (see -s/--somewhere below), '
     "in this order. "
     "If PATTERN is not given, search criteria are defined by explicit options. "
     "\n\n"

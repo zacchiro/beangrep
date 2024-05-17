@@ -61,6 +61,7 @@ Usage: bean-grep [OPTIONS] [PATTERN] FILENAME
   Search criteria can be specified with the options below and/or providing an
   explicit ("smart") PATTERN. If given, PATTERN is interpreted either as a
   date (if it is in the "YYYY-MM-DD" format), tag ("#tag"), link ("^link"),
+  account (start with an account type, e.g., "Assets", "Income", etc.),
   metadata pair ("key:value"), or string to be matched anywhere (see
   -s/--somewhere below), in this order. If PATTERN is not given, search
   criteria are defined by explicit options.

@@ -423,6 +423,10 @@ def test_cli_smart_pattern():
     assert result.exit_code == 0
     assert "Mercadito" in result.output
 
+    result = runner.invoke(cli, ["Expenses:Vacation", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "vacation days" in result.output
+
     result = runner.invoke(cli, ["--type", "commodity", "export:CASH", SAMPLE_LEDGER])
     assert result.exit_code == 0
     assert "US Dollar" in result.output
