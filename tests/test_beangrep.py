@@ -31,41 +31,6 @@ SAMPLE_LEDGER = str(
 )
 DIRECTIVES_IN_SAMPLE = 2247  # `bean-quey example.beancount` shows this
 
-_META = data.new_metadata("beangrep/test_beangrep.py", 1234)
-_FLAG = "*"
-_DATE = date(2024, 5, 10)
-
-
-# def mk_empty_txn(date=_DATE, flag=_FLAG, meta=_META) -> data.Transaction:
-#     """Test helper to create an empty transaction."""
-#     return data.Transaction(
-#         meta,
-#         date,
-#         flag,
-#         None,
-#         "something happened",
-#         data.EMPTY_SET,
-#         data.EMPTY_SET,
-#         [],
-#     )
-
-
-# def mk_txn(
-#     postings: Iterable[tuple[str, Union[str, Decimal], str]],
-#     date=_DATE,
-#     flag=_FLAG,
-#     meta=_META,
-# ) -> data.Transaction:
-#     """Test helper to create a transaction with postings.
-#
-#     Postings are specified as (account, number, currency) triples.
-#
-#     """
-#     txn = mk_empty_txn(date=date, flag=flag, meta=meta)
-#     for account, number, currency in postings:
-#         data.create_simple_posting(txn, account, number, currency)
-#     return txn
-
 
 def test_relop():
     """Test evaluation of relational operators."""
