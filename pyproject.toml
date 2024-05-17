@@ -49,4 +49,7 @@ dev = [
     "pytest-cov>=4",
 ]
 
+[tool.setuptools.package-data]
+"beangrep.data" = ["bean-grep.1"]
+
 [tool.setuptools_scm]
