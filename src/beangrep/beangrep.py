@@ -845,13 +845,11 @@ def filter_entries(
     f"This includes the automatic metadata: {sorted(INTERNALS_META)}",
 )
 @click.option(
-    "-v",
     "--verbose",
     count=True,
     help="Increase logging verbosity. "
-    "Default level is WARNING. "
-    "Passing this option once (e.g., -v) will increase it to INFO, "
-    "twice or more (e.g., -vv) to DEBUG.",
+    "Default verbosity is at WARNING level; "
+    "passing this option once will increase it to INFO, twice or more to DEBUG.",
 )
 @click.version_option(None, "--version", "-V")
 @click.pass_context
