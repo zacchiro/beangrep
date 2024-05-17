@@ -136,10 +136,11 @@ Options:
                                   not visible in the ledger. This includes the
                                   automatic metadata: ['filename', 'lineno']
                                   [default: skip-internals]
-  -v, --verbose                   Increase logging verbosity. Default level is
-                                  WARNING. Passing this option once (e.g., -v)
-                                  will increase it to INFO, twice or more
-                                  (e.g., -vv) to DEBUG.
+  --verbose                       Increase logging verbosity. Default
+                                  verbosity is at WARNING level; passing this
+                                  option once will increase it to INFO, twice
+                                  or more to DEBUG.
+  -V, --version                   Show the version and exit.
   --help                          Show this message and exit.
 
   Exit status is 0 (success) if a match is found, 1 if no match is found, 2 if
