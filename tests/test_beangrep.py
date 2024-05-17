@@ -362,6 +362,13 @@ def test_cli_basic():
     assert result.exit_code == 0
     assert result.output.startswith("Usage:")
 
+    result = runner.invoke(cli, ["-V"])
+    assert result.exit_code == 0
+    assert " version " in result.output
+    result = runner.invoke(cli, ["--version"])
+    assert result.exit_code == 0
+    assert " version " in result.output
+
     result = runner.invoke(cli, ["--foobarbazqux", SAMPLE_LEDGER])  # no such option
     assert result.exit_code == 2
 

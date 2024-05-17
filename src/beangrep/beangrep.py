@@ -853,6 +853,7 @@ def filter_entries(
     "Passing this option once (e.g., -v) will increase it to INFO, "
     "twice or more (e.g., -vv) to DEBUG.",
 )
+@click.version_option(None, "--version", "-V")
 @click.pass_context
 def cli(
     ctx,
