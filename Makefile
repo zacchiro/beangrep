@@ -7,16 +7,25 @@ UPDATE_README = dev/update-readme
 
 all: $(README) $(MAN_PAGE)
 
-build: all
-	python3 -m build
-
 $(README): $(BEANGREP_PY) $(UPDATE_README) Makefile
 	$(UPDATE_README)
 
 $(MAN_PAGE): $(BEANGREP_PY) $(MAN_EXTRAS) Makefile
 	help2man $(BEANGREP_BIN) --name "grep-like filter for Beancount" --no-info --include $(MAN_EXTRAS) --output $@
 
+check:
+	pre-commit run -a
+
+coverage:
+	dev/coverage
+
+test:
+	pytest
+
+release: all
+	python3 -m build
+
 clean:
 	rm -f $(MAN_PAGE)
 
-.PHONY: all build clean
+.PHONY: all check clean coverage release test
