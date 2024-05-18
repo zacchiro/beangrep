@@ -7,7 +7,7 @@ import calendar
 import logging
 import re
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import Decimal
 from enum import Enum
@@ -259,16 +259,16 @@ class DatePredicate:
 class Criteria:
     """Criteria to select matching Beancount entries."""
 
-    account: Optional[re.Pattern] = None
-    amount: Optional[list[AmountPredicate]] = None
-    date: Optional[list[DatePredicate]] = None
-    link: Optional[re.Pattern] = None
-    metadata: Optional[tuple[re.Pattern, re.Pattern]] = None
-    narration: Optional[re.Pattern] = None
-    payee: Optional[re.Pattern] = None
-    somewhere: Optional[re.Pattern] = None
-    tag: Optional[re.Pattern] = None
-    types: Optional[frozenset[type]] = frozenset([data.Transaction])
+    accounts: list[re.Pattern] = field(default_factory=list)
+    amounts: list[AmountPredicate] = field(default_factory=list)
+    dates: list[DatePredicate] = field(default_factory=list)
+    links: list[re.Pattern] = field(default_factory=list)
+    metadatas: list[tuple[re.Pattern, re.Pattern]] = field(default_factory=list)
+    narrations: list[re.Pattern] = field(default_factory=list)
+    payees: list[re.Pattern] = field(default_factory=list)
+    somewheres: list[re.Pattern] = field(default_factory=list)
+    tags: list[re.Pattern] = field(default_factory=list)
+    types: frozenset[type] = frozenset([data.Transaction])
 
     @staticmethod
     def _re_compile(ignore_case: bool, s: str) -> re.Pattern:
@@ -303,79 +303,92 @@ class Criteria:
         ignore_case = caseness.ignore_case(pattern)
 
         if re.search(r"^\d{4}-\d{2}-\d{2}$", pattern):
-            criteria.date = [DatePredicate.parse(f"={pattern}")]
+            criteria.dates.append(DatePredicate.parse(f"={pattern}"))
         elif re.search(r"^#[-\w]+$", pattern):
-            criteria.tag = cls._re_compile(ignore_case, pattern[1:])
+            criteria.tags.append(cls._re_compile(ignore_case, pattern[1:]))
         elif re.search(r"^@.+$", pattern):
-            criteria.payee = cls._re_compile(ignore_case, pattern[1:])
+            criteria.payees.append(cls._re_compile(ignore_case, pattern[1:]))
         elif re.search(r"^\^[-\w]+$", pattern):
-            criteria.link = cls._re_compile(ignore_case, pattern[1:])
+            criteria.links.append(cls._re_compile(ignore_case, pattern[1:]))
         elif re.search(r"^(Assets|Liabilities|Equity|Income|Expenses)", pattern):
-            criteria.account = cls._re_compile(ignore_case, pattern)
+            criteria.accounts.append(cls._re_compile(ignore_case, pattern))
         elif m := re.search(r"(?P<key>\w+):(?P<val>\w+)$", pattern):
             matches = m.groupdict()
-            criteria.metadata = (
-                cls._re_compile(ignore_case, matches["key"]),
-                cls._re_compile(ignore_case, matches["val"]),
+            criteria.metadatas.append(
+                (
+                    cls._re_compile(ignore_case, matches["key"]),
+                    cls._re_compile(ignore_case, matches["val"]),
+                )
             )
         else:
-            criteria.somewhere = cls._re_compile(ignore_case, pattern)
+            criteria.somewheres.append(cls._re_compile(ignore_case, pattern))
 
         return criteria
 
     @classmethod
     def from_cli(
         cls,
-        account_re,
-        amount_preds,
-        date_preds,
-        link_re,
-        metadata_pat,
-        narration_re,
-        payee_re,
-        somewhere_re,
-        tag_re,
-        type_pat,
+        accounts,
+        amounts,
+        dates,
+        links,
+        metadatas,
+        narrations,
+        payees,
+        somewheres,
+        tags,
+        types,
         caseness,
         base: Optional[Self] = None,
     ) -> Self:
         """Build criteria from command line arguments."""
         criteria = base if base is not None else cls()
 
-        if account_re is not None:
-            criteria.account = cls._re_compile(
-                caseness.ignore_case(account_re), account_re
+        if accounts is not None:
+            criteria.accounts.extend(
+                cls._re_compile(caseness.ignore_case(s), s) for s in accounts
             )
-        if amount_preds is not None:
-            criteria.amount = list(map(AmountPredicate.parse, amount_preds))
-        if date_preds is not None:
-            criteria.date = list(map(DatePredicate.parse, date_preds))
-        if link_re is not None:
-            criteria.link = cls._re_compile(caseness.ignore_case(link_re), link_re)
-        if metadata_pat is not None:
-            ignore_case = caseness.ignore_case(metadata_pat)
-            if KEY_VAL_SEP in metadata_pat:
-                (key_re, val_re) = metadata_pat.split(KEY_VAL_SEP, maxsplit=1)
-            else:
-                (key_re, val_re) = (metadata_pat, META_VAL_RE)
-            criteria.metadata = (
-                cls._re_compile(ignore_case, key_re),
-                cls._re_compile(ignore_case, val_re),
+        if amounts is not None:
+            criteria.amounts.extend(AmountPredicate.parse(s) for s in amounts)
+        if dates is not None:
+            criteria.dates.extend(DatePredicate.parse(s) for s in dates)
+        if links is not None:
+            criteria.links.extend(
+                cls._re_compile(caseness.ignore_case(s), s) for s in links
             )
-        if narration_re is not None:
-            criteria.narration = cls._re_compile(
-                caseness.ignore_case(narration_re), narration_re
+        if metadatas is not None:
+            for s in metadatas:
+                ignore_case = caseness.ignore_case(s)
+                if KEY_VAL_SEP in s:
+                    (key_re, val_re) = s.split(KEY_VAL_SEP, maxsplit=1)
+                else:
+                    (key_re, val_re) = (s, META_VAL_RE)
+                criteria.metadatas.append(
+                    (
+                        cls._re_compile(ignore_case, key_re),
+                        cls._re_compile(ignore_case, val_re),
+                    )
+                )
+        if narrations is not None:
+            criteria.narrations.extend(
+                cls._re_compile(caseness.ignore_case(s), s) for s in narrations
             )
-        if payee_re is not None:
-            criteria.payee = cls._re_compile(caseness.ignore_case(payee_re), payee_re)
-        if somewhere_re is not None:
-            criteria.somewhere = cls._re_compile(
-                caseness.ignore_case(somewhere_re), somewhere_re
+        if payees is not None:
+            criteria.payees.extend(
+                cls._re_compile(caseness.ignore_case(s), s) for s in payees
             )
-        if tag_re is not None:
-            criteria.tag = cls._re_compile(caseness.ignore_case(tag_re), tag_re)
-        if type_pat is not None:
-            criteria.types = parse_types(type_pat)
+        if somewheres is not None:
+            criteria.somewheres.extend(
+                cls._re_compile(caseness.ignore_case(s), s) for s in somewheres
+            )
+        if tags is not None:
+            criteria.tags.extend(
+                cls._re_compile(caseness.ignore_case(s), s) for s in tags
+            )
+        if types is not None:
+            # Note: we *override* here, rather than merging, because types are not meant
+            # to be incrementally specified.
+            criteria.types = frozenset(parse_types(types))
 
         return criteria
 
@@ -552,9 +565,9 @@ def get_strings(
     return strings
 
 
-def account_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
+def account_matches(entry: data.Directive, criteria: Iterable[re.Pattern]) -> bool:
     """Check if a Beancount entry matches account criteria."""
-    return any(criteria.search(a) for a in get_accounts(entry))
+    return all(any(pat.search(a) for a in get_accounts(entry)) for pat in criteria)
 
 
 def amount_matches(entry: data.Directive, criteria: Iterable[AmountPredicate]) -> bool:
@@ -579,55 +592,71 @@ def date_matches(entry: data.Directive, criteria: Iterable[DatePredicate]) -> bo
     )
 
 
-def link_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
+def link_matches(entry: data.Directive, criteria: Iterable[re.Pattern]) -> bool:
     """Check if a Beancount entry matches links criteria."""
-    return any(criteria.search(link) for link in get_links(entry))
+    return all(any(pat.search(link) for link in get_links(entry)) for pat in criteria)
 
 
 def metadata_matches(
     entry: data.Directive,
-    criteria: tuple[re.Pattern, re.Pattern],
+    criteria: Iterable[tuple[re.Pattern, re.Pattern]],
     skip_internals: bool = SKIP_INTERNALS,
 ) -> bool:
     """Check if a Beancount entry matches metadata criteria."""
-    (key_re, val_re) = criteria
-    return any(
-        key_re.search(k) and val_re.search(str(v))
-        for (k, v) in get_metadata(entry, skip_internals=skip_internals)
+    return all(
+        any(
+            key_pat.search(k) and val_pat.search(str(v))
+            for (k, v) in get_metadata(entry, skip_internals=skip_internals)
+        )
+        for (key_pat, val_pat) in criteria
     )
 
 
-def narration_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
+def narration_matches(entry: data.Directive, criteria: Iterable[re.Pattern]) -> bool:
     """Check if a Beancount entry matches narration criteria."""
-    return (s := get_narration(entry)) is not None and bool(criteria.search(s))
+    return (s := get_narration(entry)) is not None and all(
+        bool(pat.search(s)) for pat in criteria
+    )
 
 
-def payee_matches(entry: data.Directive, criteria: re.Pattern) -> bool:
+def payee_matches(entry: data.Directive, criteria: Iterable[re.Pattern]) -> bool:
     """Check if a Beancount entry matches payee criteria."""
-    return (s := get_payee(entry)) is not None and bool(criteria.search(s))
+    return (s := get_payee(entry)) is not None and all(
+        bool(pat.search(s)) for pat in criteria
+    )
 
 
 def somewhere_matches(
     entry: data.Directive,
-    criteria: re.Pattern,
+    criteria: Iterable[re.Pattern],
     posting_tags_meta: str = POSTING_TAGS_META,
     skip_internals: bool = SKIP_INTERNALS,
 ) -> bool:
     """Check if a Beancount entry matches somewhere criteria."""
-    return any(
-        criteria.search(s)
-        for s in get_strings(
-            entry, posting_tags_meta=posting_tags_meta, skip_internals=skip_internals
+    return all(
+        any(
+            pat.search(s)
+            for s in get_strings(
+                entry,
+                posting_tags_meta=posting_tags_meta,
+                skip_internals=skip_internals,
+            )
         )
+        for pat in criteria
     )
     # return bool(criteria.search(printer.format_entry(entry)))
 
 
 def tag_matches(
-    entry: data.Directive, criteria: re.Pattern, posting_tags_meta=POSTING_TAGS_META
+    entry: data.Directive,
+    criteria: Iterable[re.Pattern],
+    posting_tags_meta=POSTING_TAGS_META,
 ) -> bool:
     """Check if a Beancount entry matches tag criteria."""
-    return any(criteria.search(t) for t in get_tags(entry, posting_tags_meta))
+    return all(
+        any(pat.search(t) for t in get_tags(entry, posting_tags_meta))
+        for pat in criteria
+    )
 
 
 def type_matches(entry: data.Directive, types: Iterable[type]) -> bool:
@@ -644,36 +673,34 @@ def entry_matches(
     """Check if a Beancount entry matches stated criteria."""
 
     predicates = []
-    # ignoring types below because mypy fails to understand criteria fields are not None
-    # inside lambdas, in spite of the explicit `is not None` guard
-    if criteria.account is not None:
-        predicates.append(lambda e: account_matches(e, criteria.account))  # type: ignore  # noqa:E501
-    if criteria.amount is not None:
-        predicates.append(lambda e: amount_matches(e, criteria.amount))  # type: ignore
-    if criteria.date is not None:
-        predicates.append(lambda e: date_matches(e, criteria.date))  # type: ignore
-    if criteria.link is not None:
-        predicates.append(lambda e: link_matches(e, criteria.link))  # type: ignore
-    if criteria.metadata is not None:
+    if criteria.accounts:
+        predicates.append(lambda e: account_matches(e, criteria.accounts))
+    if criteria.amounts:
+        predicates.append(lambda e: amount_matches(e, criteria.amounts))
+    if criteria.dates:
+        predicates.append(lambda e: date_matches(e, criteria.dates))
+    if criteria.links:
+        predicates.append(lambda e: link_matches(e, criteria.links))
+    if criteria.metadatas:
         predicates.append(
             lambda e: metadata_matches(
-                e, criteria.metadata, skip_internals=skip_internals  # type: ignore
+                e, criteria.metadatas, skip_internals=skip_internals
             )
         )
-    if criteria.narration is not None:
-        predicates.append(lambda e: narration_matches(e, criteria.narration))  # type: ignore  # noqa:E501
-    if criteria.payee is not None:
-        predicates.append(lambda e: payee_matches(e, criteria.payee))  # type: ignore
-    if criteria.somewhere is not None:
+    if criteria.narrations:
+        predicates.append(lambda e: narration_matches(e, criteria.narrations))
+    if criteria.payees:
+        predicates.append(lambda e: payee_matches(e, criteria.payees))
+    if criteria.somewheres:
         predicates.append(
             lambda e: somewhere_matches(
-                e, criteria.somewhere, posting_tags_meta, skip_internals  # type: ignore
+                e, criteria.somewheres, posting_tags_meta, skip_internals
             )
         )
-    if criteria.tag is not None:
-        predicates.append(lambda e: tag_matches(e, criteria.tag, posting_tags_meta))  # type: ignore  # noqa:E501
-    if criteria.types is not None:
-        predicates.append(lambda e: type_matches(entry, criteria.types))  # type: ignore
+    if criteria.tags:
+        predicates.append(lambda e: tag_matches(e, criteria.tags, posting_tags_meta))
+    if criteria.types:
+        predicates.append(lambda e: type_matches(entry, criteria.types))
 
     is_match = all(p(entry) for p in predicates)
     return is_match

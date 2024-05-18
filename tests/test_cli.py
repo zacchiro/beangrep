@@ -183,6 +183,35 @@ def test_cli_case_matching():
     assert runner.invoke(cli, ["-i", "-p", "Uncle boons", SAMPLE_LEDGER]).exit_code == 0
 
 
+def test_cli_conjunction():
+    """Test logical conjunction of mutiple criteria."""
+    runner = CliRunner()
+    # Payee + date:
+    assert (
+        runner.invoke(cli, ["-p", "Hoogle", "-d", "2015-12", SAMPLE_LEDGER]).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(
+            cli, ["-p", "Hoogle", "-d", "2015-12-04", SAMPLE_LEDGER]
+        ).exit_code
+        == 1
+    )
+    assert runner.invoke(cli, ["-d", "2015-12-04", SAMPLE_LEDGER]).exit_code == 0
+
+    # Narration + narration:
+    assert runner.invoke(cli, ["-n", "Sell", SAMPLE_LEDGER]).exit_code == 0
+    assert runner.invoke(cli, ["-n", "Dividend", SAMPLE_LEDGER]).exit_code == 0
+    assert (
+        runner.invoke(cli, ["-n", "Sell shares", "-n", "ITOT", SAMPLE_LEDGER]).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(cli, ["-n", "Sell", "-n", "Dividend", SAMPLE_LEDGER]).exit_code
+        == 1
+    )
+
+
 def test_cli_quiet():
     """Test --quiet flag."""
     runner = CliRunner()

@@ -101,26 +101,32 @@ def test_date_predicate_parse_error():
 
 
 def test_pattern_guessing():
-    assert Criteria.guess("2024-05-15").date == [DatePredicate.parse("=2024-05-15")]
-    assert Criteria.guess("2024-05").date is None
-    assert Criteria.guess("2024").date is None
+    assert Criteria.guess("2024-05-15").dates == [DatePredicate.parse("=2024-05-15")]
+    assert Criteria.guess("2024-05").dates == []
+    assert Criteria.guess("2024").dates == []
 
-    assert Criteria.guess("#some-tag").tag == re.compile("some-tag", re.IGNORECASE)
-    assert Criteria.guess("some-tag").tag is None
+    assert Criteria.guess("#some-tag").tags == [re.compile("some-tag", re.IGNORECASE)]
+    assert Criteria.guess("some-tag").tags == []
 
-    assert Criteria.guess("^some-link").link == re.compile("some-link", re.IGNORECASE)
-    assert Criteria.guess("some-link").link is None
+    assert Criteria.guess("^some-link").links == [
+        re.compile("some-link", re.IGNORECASE)
+    ]
+    assert Criteria.guess("some-link").links == []
 
-    assert Criteria.guess("key:val").metadata == (
-        re.compile("key", re.IGNORECASE),
-        re.compile("val", re.IGNORECASE),
-    )
-    assert Criteria.guess("key:Val").metadata == (re.compile("key"), re.compile("Val"))
-    assert Criteria.guess("key val").metadata is None
+    assert Criteria.guess("key:val").metadatas == [
+        (
+            re.compile("key", re.IGNORECASE),
+            re.compile("val", re.IGNORECASE),
+        )
+    ]
+    assert Criteria.guess("key:Val").metadatas == [
+        (re.compile("key"), re.compile("Val"))
+    ]
+    assert Criteria.guess("key val").metadatas == []
 
-    assert Criteria.guess("some text").somewhere == (
-        re.compile("some text", re.IGNORECASE)
-    )
+    assert Criteria.guess("some text").somewheres == [
+        (re.compile("some text", re.IGNORECASE))
+    ]
 
 
 def load_sample_ledger(filename=SAMPLE_LEDGER):
@@ -145,24 +151,28 @@ def mk_criteria(**kwargs):
 
 def test_account_filtering():
     l = load_sample_ledger()  # noqa:E741
-    assert grep_len(l, mk_criteria(account=re.compile("Y2013:US:State"))) == 28
-    assert grep_len(l, mk_criteria(account=re.compile("US:Federal"))) == 94
-    assert grep_len(l, mk_criteria(account=re.compile("^US:Federal$"))) == 0
+    assert grep_len(l, mk_criteria(accounts=[re.compile("Y2013:US:State")])) == 28
+    assert grep_len(l, mk_criteria(accounts=[re.compile("US:Federal")])) == 94
+    assert grep_len(l, mk_criteria(accounts=[re.compile("^US:Federal$")])) == 0
 
 
 def test_amount_filtering():
     l = load_sample_ledger()  # noqa:E741
-    assert grep_len(l, mk_criteria(amount=[AmountPredicate.parse("=3219.17 USD")])) == 2
-    assert grep_len(l, mk_criteria(amount=[AmountPredicate.parse("3219.17")])) == 2
-    assert grep_len(l, mk_criteria(amount=[AmountPredicate.parse("=3219.17 EUR")])) == 0
-    assert grep_len(l, mk_criteria(amount=[AmountPredicate.parse("76.81 USD")])) == 1
-    assert grep_len(l, mk_criteria(amount=[AmountPredicate.parse(">3000 USD")])) == 29
-    assert grep_len(l, mk_criteria(amount=[AmountPredicate.parse("<1 USD")])) == 1177
+    assert (
+        grep_len(l, mk_criteria(amounts=[AmountPredicate.parse("=3219.17 USD")])) == 2
+    )
+    assert grep_len(l, mk_criteria(amounts=[AmountPredicate.parse("3219.17")])) == 2
+    assert (
+        grep_len(l, mk_criteria(amounts=[AmountPredicate.parse("=3219.17 EUR")])) == 0
+    )
+    assert grep_len(l, mk_criteria(amounts=[AmountPredicate.parse("76.81 USD")])) == 1
+    assert grep_len(l, mk_criteria(amounts=[AmountPredicate.parse(">3000 USD")])) == 29
+    assert grep_len(l, mk_criteria(amounts=[AmountPredicate.parse("<1 USD")])) == 1177
     assert (
         grep_len(
             l,
             mk_criteria(
-                amount=[
+                amounts=[
                     AmountPredicate.parse(">2800 USD"),
                     AmountPredicate.parse("<3000 USD"),
                 ]
@@ -174,23 +184,23 @@ def test_amount_filtering():
 
 def test_date_filtering():
     l = load_sample_ledger()  # noqa:E741
-    assert grep_len(l, mk_criteria(date=[DatePredicate.parse("<1700")])) == 0
-    assert grep_len(l, mk_criteria(date=[DatePredicate.parse("2013")])) == 739
-    assert grep_len(l, mk_criteria(date=[DatePredicate.parse("2013-03")])) == 67
-    assert grep_len(l, mk_criteria(date=[DatePredicate.parse("<=2013-12")])) == 765
-    assert grep_len(l, mk_criteria(date=[DatePredicate.parse("2014")])) == 750
-    assert grep_len(l, mk_criteria(date=[DatePredicate.parse("=2015")])) == 731
-    assert grep_len(l, mk_criteria(date=[DatePredicate.parse("=2015-05-01")])) == 6
-    assert grep_len(l, mk_criteria(date=[DatePredicate.parse("=2030")])) == 1
-    assert grep_len(l, mk_criteria(date=[DatePredicate.parse(">=2029-08")])) == 1
-    assert grep_len(l, mk_criteria(date=[DatePredicate.parse(">2015-12-17")])) == 9
-    assert grep_len(l, mk_criteria(date=[DatePredicate.parse(">2031")])) == 0
+    assert grep_len(l, mk_criteria(dates=[DatePredicate.parse("<1700")])) == 0
+    assert grep_len(l, mk_criteria(dates=[DatePredicate.parse("2013")])) == 739
+    assert grep_len(l, mk_criteria(dates=[DatePredicate.parse("2013-03")])) == 67
+    assert grep_len(l, mk_criteria(dates=[DatePredicate.parse("<=2013-12")])) == 765
+    assert grep_len(l, mk_criteria(dates=[DatePredicate.parse("2014")])) == 750
+    assert grep_len(l, mk_criteria(dates=[DatePredicate.parse("=2015")])) == 731
+    assert grep_len(l, mk_criteria(dates=[DatePredicate.parse("=2015-05-01")])) == 6
+    assert grep_len(l, mk_criteria(dates=[DatePredicate.parse("=2030")])) == 1
+    assert grep_len(l, mk_criteria(dates=[DatePredicate.parse(">=2029-08")])) == 1
+    assert grep_len(l, mk_criteria(dates=[DatePredicate.parse(">2015-12-17")])) == 9
+    assert grep_len(l, mk_criteria(dates=[DatePredicate.parse(">2031")])) == 0
 
     assert (
         grep_len(
             l,
             mk_criteria(
-                date=[DatePredicate.parse(">=2014"), DatePredicate.parse("<=2015")]
+                dates=[DatePredicate.parse(">=2014"), DatePredicate.parse("<=2015")]
             ),
         )
         == 750 + 731
@@ -199,7 +209,7 @@ def test_date_filtering():
         grep_len(
             l,
             mk_criteria(
-                date=[DatePredicate.parse(">2013"), DatePredicate.parse("<2013")]
+                dates=[DatePredicate.parse(">2013"), DatePredicate.parse("<2013")]
             ),
         )
         == 0
@@ -208,30 +218,31 @@ def test_date_filtering():
 
 def test_link_filtering():
     l = load_sample_ledger()  # noqa:E741
-    assert grep_len(l, mk_criteria(link=re.compile("day-in-sfo"))) == 2
-    assert grep_len(l, mk_criteria(link=re.compile("day-in-chicago"))) == 4
-    assert grep_len(l, mk_criteria(link=re.compile("^a-day-in-"))) == 2 + 4
+    assert grep_len(l, mk_criteria(links=[re.compile("day-in-sfo")])) == 2
+    assert grep_len(l, mk_criteria(links=[re.compile("day-in-chicago")])) == 4
+    assert grep_len(l, mk_criteria(links=[re.compile("^a-day-in-")])) == 2 + 4
 
 
 def test_metadata_filtering():
     l = load_sample_ledger()  # noqa:E741
     assert (
         grep_len(
-            l, mk_criteria(metadata=(re.compile("^name$"), re.compile("US Dollar")))
+            l, mk_criteria(metadatas=[(re.compile("^name$"), re.compile("US Dollar"))])
         )
         == 1
     )
     assert (
-        grep_len(l, mk_criteria(metadata=(re.compile("^name$"), re.compile(".*")))) == 9
+        grep_len(l, mk_criteria(metadatas=[(re.compile("^name$"), re.compile(".*"))]))
+        == 9
     )
     assert (
         grep_len(
-            l, mk_criteria(metadata=(re.compile("^name$"), re.compile("Vanguard")))
+            l, mk_criteria(metadatas=[(re.compile("^name$"), re.compile("Vanguard"))])
         )
         == 3
     )
     assert (  # filename metadata are skipped by default, hence this returns 0
-        grep_len(l, mk_criteria(metadata=(re.compile("filename"), re.compile(".*"))))
+        grep_len(l, mk_criteria(metadatas=[(re.compile("filename"), re.compile(".*"))]))
         == 0
     )
     assert (  # passing skip_internals=False explicitly this time, to match on filename
@@ -239,7 +250,7 @@ def test_metadata_filtering():
             list(
                 filter_entries(
                     l,
-                    mk_criteria(metadata=(re.compile("filename"), re.compile(".*"))),
+                    mk_criteria(metadatas=[(re.compile("filename"), re.compile(".*"))]),
                     skip_internals=False,
                 )
             )
@@ -247,52 +258,58 @@ def test_metadata_filtering():
         == DIRECTIVES_IN_SAMPLE
     )
     assert (
-        grep_len(l, mk_criteria(metadata=(re.compile(".*"), re.compile("NYSEARC"))))
+        grep_len(l, mk_criteria(metadatas=[(re.compile(".*"), re.compile("NYSEARC"))]))
         == 4
     )
 
 
 def test_narration_filtering():
     l = load_sample_ledger()  # noqa:E741
-    assert grep_len(l, mk_criteria(narration=re.compile("Paying the rent"))) == 35
-    assert grep_len(l, mk_criteria(narration=re.compile("paying the rent"))) == 0
-    assert grep_len(l, mk_criteria(narration=re.compile("Transfering"))) == 9
-    assert grep_len(l, mk_criteria(narration=re.compile("one year$"))) == 3
-    assert grep_len(l, mk_criteria(narration=re.compile("^STATE"))) == 2
+    assert grep_len(l, mk_criteria(narrations=[re.compile("Paying the rent")])) == 35
+    assert grep_len(l, mk_criteria(narrations=[re.compile("paying the rent")])) == 0
+    assert grep_len(l, mk_criteria(narrations=[re.compile("Transfering")])) == 9
+    assert grep_len(l, mk_criteria(narrations=[re.compile("one year$")])) == 3
+    assert grep_len(l, mk_criteria(narrations=[re.compile("^STATE")])) == 2
 
 
 def test_payee_filtering():
     l = load_sample_ledger()  # noqa:E741
-    assert grep_len(l, mk_criteria(payee=re.compile("^Cafe"))) == 59
-    assert grep_len(l, mk_criteria(payee=re.compile("Cafe Modagor"))) == 51
-    assert grep_len(l, mk_criteria(payee=re.compile("Cafe Select$"))) == 8
+    assert grep_len(l, mk_criteria(payees=[re.compile("^Cafe")])) == 59
+    assert grep_len(l, mk_criteria(payees=[re.compile("Cafe Modagor")])) == 51
+    assert grep_len(l, mk_criteria(payees=[re.compile("Cafe Select$")])) == 8
 
 
 def test_somewhere_filtering():
     l = load_sample_ledger()  # noqa:E741
     assert (
-        grep_len(l, mk_criteria(somewhere=re.compile("^Transfering"))) == 9
+        grep_len(l, mk_criteria(somewheres=[re.compile("^Transfering")])) == 9
     )  # txn narration
-    assert grep_len(l, mk_criteria(somewhere=re.compile("^Cafe"))) == 59  # txn payee
+    assert grep_len(l, mk_criteria(somewheres=[re.compile("^Cafe")])) == 59  # txn payee
     assert (
-        grep_len(l, mk_criteria(somewhere=re.compile("US:Federal"))) == 94
+        grep_len(l, mk_criteria(somewheres=[re.compile("US:Federal")])) == 94
     )  # txn account
-    assert grep_len(l, mk_criteria(somewhere=re.compile("trip-san"))) == 21  # txn tag
-    assert grep_len(l, mk_criteria(somewhere=re.compile("^a-day-in"))) == 6  # txn link
-    assert grep_len(l, mk_criteria(somewhere=re.compile("2015-05-01"))) == 6  # txn date
     assert (
-        grep_len(l, mk_criteria(somewhere=re.compile("3219.17 USD"))) == 2
+        grep_len(l, mk_criteria(somewheres=[re.compile("trip-san")])) == 21
+    )  # txn tag
+    assert (
+        grep_len(l, mk_criteria(somewheres=[re.compile("^a-day-in")])) == 6
+    )  # txn link
+    assert (
+        grep_len(l, mk_criteria(somewheres=[re.compile("2015-05-01")])) == 6
+    )  # txn date
+    assert (
+        grep_len(l, mk_criteria(somewheres=[re.compile("3219.17 USD")])) == 2
     )  # txn amount
     assert (
-        grep_len(l, mk_criteria(somewhere=re.compile("San Francisco"))) == 1
+        grep_len(l, mk_criteria(somewheres=[re.compile("San Francisco")])) == 1
     )  # event description
 
 
 def test_tag_filtering():
     l = load_sample_ledger()  # noqa:E741
-    assert grep_len(l, mk_criteria(tag=re.compile("^trip-new-york-2014$"))) == 45
-    assert grep_len(l, mk_criteria(tag=re.compile("^trip"))) == 92
-    assert grep_len(l, mk_criteria(tag=re.compile("asfgkjashfg"))) == 0
+    assert grep_len(l, mk_criteria(tags=[re.compile("^trip-new-york-2014$")])) == 45
+    assert grep_len(l, mk_criteria(tags=[re.compile("^trip")])) == 92
+    assert grep_len(l, mk_criteria(tags=[re.compile("asfgkjashfg")])) == 0
 
 
 def test_type_filtering():

@@ -31,8 +31,8 @@ Search criteria can be specified with the options below and/or providing an expl
 "smart" PATTERN.  If given, PATTERN is interpreted as described below under "Patterns".
 If not given, search criteria are defined by explicit options.
 
-Multiple options and/or PATTERN are logically joined (AND-ed) together. In case of
-overlap, explicit options override PATTERN.
+Multiple options, options given mutiple times, and PATTERN(s) are logically joined
+(AND-ed) together.
 
 The granularity of matching (and results) is that of individual entries, e.g., full
 transactions, balances, notes, etc. By default only transactions are returned; use the
@@ -74,14 +74,15 @@ occurred.""",
 @click.option(
     "--account",
     "-a",
-    "account_re",
+    "accounts",
     metavar="REGEX",
+    multiple=True,
     help="Only return entries referencing accounts with names matching given regex.",
 )
 @click.option(
     "--amount",
     "-A",
-    "amount_preds",
+    "amounts",
     metavar='"[OP]AMOUNT [REGEX]"',
     multiple=True,
     help="Only return entries with amounts matching the given amount predicate. "
@@ -94,7 +95,7 @@ occurred.""",
 @click.option(
     "--date",
     "-d",
-    "date_preds",
+    "dates",
     metavar="[OP]DATE",
     multiple=True,
     help="Only return entries with dates matching the given date predicate. "
@@ -106,16 +107,18 @@ occurred.""",
 @click.option(
     "--link",
     "-l",
-    "link_re",
+    "links",
     metavar="REGEX",
+    multiple=True,
     help="Only return entries with at least one link matching given regex.",
 )
 @click.option(
     "--meta",
     "--metadata",
     "-m",
-    "metadata_pat",
+    "metadatas",
     metavar="REGEX[:REGEX]",
+    multiple=True,
     help="Only return entries with at least one metadata key/value pair matching "
     "given pattern. A pattern is a pair of regexs separated by ':', "
     "the former matching on metadata key, the latter on metadata value. "
@@ -124,14 +127,16 @@ occurred.""",
 @click.option(
     "--narration",
     "-n",
-    "narration_re",
+    "narrations",
     metavar="REGEX",
+    multiple=True,
     help="Only return entries whose narrations match given regex.",
 )
 @click.option(
     "--payee",
     "-p",
-    "payee_re",
+    "payees",
+    multiple=True,
     metavar="REGEX",
     help="Only return entries whose payees match given regex.",
 )
@@ -139,22 +144,24 @@ occurred.""",
     "--somewhere",
     "--anywhere",
     "-s",
-    "somewhere_re",
+    "somewheres",
     metavar="REGEX",
+    multiple=True,
     help="Only return entries with a value in them, anywhere, matching given regex.",
 )
 @click.option(
     "--tag",
     "-t",
-    "tag_re",
+    "tags",
     metavar="REGEX",
+    multiple=True,
     help="Only return entries with at least one tag matching given regex. "
     "The tag can be located anywhere.",
 )
 @click.option(
     "--type",
     "-T",
-    "type_pat",
+    "types",
     metavar="TYPE(S)",
     help="Only return entries of certain types. "
     f"Types are specified as a '{TYPE_SEP}'-separated list of type names; "
@@ -224,16 +231,16 @@ otherwise. Overridden by: --case-sensitive and -i/--ignore-case.""",
 def cli(
     ctx,
     args,
-    account_re,
-    amount_preds,
-    date_preds,
-    link_re,
-    metadata_pat,
-    narration_re,
-    payee_re,
-    somewhere_re,
-    tag_re,
-    type_pat,
+    accounts,
+    amounts,
+    dates,
+    links,
+    metadatas,
+    narrations,
+    payees,
+    somewheres,
+    tags,
+    types,
     case_sensitive,
     ignore_case,
     smart_case,
@@ -264,19 +271,19 @@ def cli(
     caseness = Caseness.from_cli(case_sensitive, ignore_case, smart_case)
     try:
         criteria = Criteria()  # start from default criteria
-        if pattern is not None:  # override with smart pattern, if given as argument
+        if pattern is not None:  # append smart pattern(s), if any
             criteria = Criteria.guess(pattern, caseness, base=criteria)
-        criteria = Criteria.from_cli(  # override with explicit options, if any
-            account_re=account_re,
-            amount_preds=(amount_preds or None),
-            date_preds=(date_preds or None),
-            link_re=link_re,
-            metadata_pat=metadata_pat,
-            narration_re=narration_re,
-            payee_re=payee_re,
-            somewhere_re=somewhere_re,
-            tag_re=tag_re,
-            type_pat=type_pat,
+        criteria = Criteria.from_cli(  # append explicit options, if any
+            accounts=accounts,
+            amounts=amounts,
+            dates=dates,
+            links=links,
+            metadatas=metadatas,
+            narrations=narrations,
+            payees=payees,
+            somewheres=somewheres,
+            tags=tags,
+            types=types,
             caseness=caseness,
             base=criteria,
         )
