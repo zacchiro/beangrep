@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: 2024 Stefano Zacchiroli <zack@upsilon.cc>
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+# Depends: git-extras (/usr/bin/git-changelog)
+
+if [ -z "$1" ] ; then
+    echo "Usage:   tag-release VERSION [GIT_TAG_OPTIONS}"
+    echo "Example: tag-release 3.1.4"
+    exit 2
+fi
+version="$1"
+shift 1
+
+git changelog --tag "$version" --no-merges --stdout \
+| grep -v "========" \
+| git tag --annotate --file=- --edit "$@" "$version"
