@@ -59,12 +59,12 @@ Usage: bean-grep [OPTIONS] [PATTERN] FILENAME...
   print matching entries to standard output.
 
   Search criteria can be specified with the options below and/or providing an
-  explicit "smart" PATTERN.  If given, PATTERN is interpreted as described
+  explicit "smart" PATTERN. If given, PATTERN is interpreted as described
   below under "Patterns". If not given, search criteria are defined by
   explicit options.
 
-  Multiple options and/or PATTERN are logically joined (AND-ed) together. In
-  case of overlap, explicit options override PATTERN.
+  Multiple options, options given mutiple times, and PATTERN(s) are logically
+  joined (AND-ed) together.
 
   The granularity of matching (and results) is that of individual entries,
   e.g., full transactions, balances, notes, etc. By default only transactions
@@ -102,8 +102,8 @@ Options:
                                   pattern. A pattern is a pair of regexs
                                   separated by ':', the former matching on
                                   metadata key, the latter on metadata value.
-                                  The second regex is optional and defaults to
-                                  '.*'.
+                                  "The second regex is optional and defaults
+                                  to '.*'.
   -n, --narration REGEX           Only return entries whose narrations match
                                   given regex.
   -p, --payee REGEX               Only return entries whose payees match given
@@ -114,12 +114,12 @@ Options:
   -t, --tag REGEX                 Only return entries with at least one tag
                                   matching given regex. The tag can be located
                                   anywhere.
-  -T, --type TYPE(S)              Only return entries of certain types. Types
-                                  are specified as a ','-separated list of
+  -T, --type TYPE(S)              Only return entries of certain types.  Types
+                                  are specified as a ","-separated list of
                                   type names; type names are: open, close,
                                   commodity, pad, balance, transaction, note,
                                   event, query, price, document, custom. The
-                                  special value 'all' means: all directive
+                                  special value "all" means: all directive
                                   types. [default: transaction]
   --case-sensitive                Search case sensitively. Overrides:
                                   -i/--ignore-case and -S/--smart-case.

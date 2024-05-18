@@ -28,7 +28,7 @@ from .beangrep import (
 print matching entries to standard output.
 
 Search criteria can be specified with the options below and/or providing an explicit
-"smart" PATTERN.  If given, PATTERN is interpreted as described below under "Patterns".
+"smart" PATTERN. If given, PATTERN is interpreted as described below under "Patterns".
 If not given, search criteria are defined by explicit options.
 
 Multiple options, options given mutiple times, and PATTERN(s) are logically joined
@@ -85,12 +85,11 @@ occurred.""",
     "amounts",
     metavar='"[OP]AMOUNT [REGEX]"',
     multiple=True,
-    help="Only return entries with amounts matching the given amount predicate. "
-    "An amount predicate start with an optional comparison operator "
-    "(one of '<', '<=', '=', '>=', '>', with '=' being the default), "
-    "followed by a decimal number (using '.' as decimal separator), "
-    "followed by an optional currency regex. "
-    "Multiple amount predicates can be given to express complex amount ranges.",
+    help="""Only return entries with amounts matching the given amount predicate. An
+amount predicate start with an optional comparison operator (one of "<", "<=", "=",
+">=", ">", with "=" being the default), followed by a decimal number (using "." as
+decimal separator), followed by an optional currency regex. Multiple amount predicates
+can be given to express complex amount ranges.""",
 )
 @click.option(
     "--date",
@@ -98,11 +97,10 @@ occurred.""",
     "dates",
     metavar="[OP]DATE",
     multiple=True,
-    help="Only return entries with dates matching the given date predicate. "
-    "A date predicate start with an optional comparison operator "
-    "(one of '<', '<=', '=', '>=', '>', with '=' being the default), "
-    "and is followed by a date in the form YYYY-[MM[-DD]]. "
-    "Multiple date predicates can be given to express complex date ranges.",
+    help="""Only return entries with dates matching the given date predicate. A date
+predicate start with an optional comparison operator (one of "<", "<=", "=", ">=", ">",
+with "=" being the default), and is followed by a date in the form YYYY-[MM[-DD]].
+Multiple date predicates can be given to express complex date ranges.""",
 )
 @click.option(
     "--link",
@@ -119,10 +117,10 @@ occurred.""",
     "metadatas",
     metavar="REGEX[:REGEX]",
     multiple=True,
-    help="Only return entries with at least one metadata key/value pair matching "
-    "given pattern. A pattern is a pair of regexs separated by ':', "
-    "the former matching on metadata key, the latter on metadata value. "
-    f"The second regex is optional and defaults to '{META_VAL_RE}'.",
+    help=f"""Only return entries with at least one metadata key/value pair matching
+given pattern. A pattern is a pair of regexs separated by ":", the former matching on
+metadata key, the latter on metadata value. The second regex is optional and defaults to
+"{META_VAL_RE}".""",
 )
 @click.option(
     "--narration",
@@ -155,20 +153,18 @@ occurred.""",
     "tags",
     metavar="REGEX",
     multiple=True,
-    help="Only return entries with at least one tag matching given regex. "
-    "The tag can be located anywhere.",
+    help="""Only return entries with at least one tag matching given regex. The tag can
+be located anywhere.""",
 )
 @click.option(
     "--type",
     "-T",
     "types",
     metavar="TYPE(S)",
-    help="Only return entries of certain types. "
-    f"Types are specified as a '{TYPE_SEP}'-separated list of type names; "
-    "type names are: open, close, commodity, pad, balance, transaction, "
-    "note, event, query, price, document, custom. "
-    "The special value 'all' means: all directive types. "
-    "[default: transaction]",
+    help=f"""Only return entries of certain types.  Types are specified as a
+"{TYPE_SEP}"-separated list of type names; type names are: open, close, commodity, pad,
+balance, transaction, note, event, query, price, document, custom. The special value
+"all" means: all directive types. [default: transaction]""",
 )
 @click.option(
     "--case-sensitive",
@@ -208,23 +204,22 @@ otherwise. Overridden by: --case-sensitive and -i/--ignore-case.""",
     "quiet",
     default=False,
     show_default=True,
-    help="Quiet, do not write anything to standard output. "
-    "Exit successfully immediately if any match is found.",
+    help="""Quiet, do not write anything to standard output. Exit successfully
+immediately if any match is found.""",
 )
 @click.option(
     "--skip-internals/--no-skip-internals",
     "skip_internals",
     default=True,
     show_default=True,
-    help="When matching, ignore internal information not visible in the ledger. "
-    f"This includes the automatic metadata: {sorted(INTERNALS_META)}",
+    help=f"""When matching, ignore internal information not visible in the ledger. This
+includes the automatic metadata: {sorted(INTERNALS_META)}""",
 )
 @click.option(
     "--verbose",
     count=True,
-    help="Increase logging verbosity. "
-    "Default verbosity is at WARNING level; "
-    "passing this option once will increase it to INFO, twice or more to DEBUG.",
+    help="""Increase logging verbosity. Default verbosity is at WARNING level; passing
+this option once will increase it to INFO, twice or more to DEBUG.""",
 )
 @click.version_option(None, "--version", "-V")
 @click.pass_context
