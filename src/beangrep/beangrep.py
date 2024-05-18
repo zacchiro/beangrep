@@ -696,28 +696,44 @@ def filter_entries(
 
 
 @click.command(
-    help="Search for entries matching given criteria in Beancount journals. "
-    "Pretty print matching entries to standard output."
-    "\n\n"
-    "Search criteria can be specified with the options below and/or providing an "
-    'explicit ("smart") PATTERN. If given, PATTERN is interpreted either as a date '
-    '(if it is in the "YYYY-MM-DD" format), tag ("#tag"), link ("^link"), account '
-    '(start with an account type, e.g., "Assets", "Income", etc.), metadata pair '
-    '("key:value"), or string to be matched anywhere (see -s/--somewhere below), '
-    "in this order. "
-    "If PATTERN is not given, search criteria are defined by explicit options. "
-    "\n\n"
-    "Multiple options and/or PATTERN are logically joined (AND-ed) together. "
-    "In case of overlap, explicit options override PATTERN. "
-    "\n\n"
-    "The granularity of matching (and results) is that of individual entries, e.g., "
-    "full transactions, balances, notes, etc. By default only transactions are returned"
-    "; use the --type/-T option to override."
-    "\n\n"
-    'To read from standard input, pass "-" as FILENAME, but beware that it implies '
-    "on-disk buffering of stdin.",
-    epilog="Exit status is 0 (success) if a match is found, "
-    "1 if no match is found, 2 if an error occurred.",
+    help="""Search for entries matching given criteria in Beancount journals. Pretty
+print matching entries to standard output.
+
+Search criteria can be specified with the options below and/or providing an explicit
+"smart" PATTERN.  If given, PATTERN is interpreted as described below under "Patterns".
+If not given, search criteria are defined by explicit options.
+
+Multiple options and/or PATTERN are logically joined (AND-ed) together. In case of
+overlap, explicit options override PATTERN.
+
+The granularity of matching (and results) is that of individual entries, e.g., full
+transactions, balances, notes, etc. By default only transactions are returned; use the
+--type/-T option to override.
+
+To read from standard input, pass "-" as FILENAME, but beware that it implies on-disk
+buffering of stdin.""",
+    epilog="""Patterns:
+
+When given the "smart" PATTERN is interpreted according to the following heuristics,
+tried in order, first match wins:
+
+- if it is in the form "YYYY-MM-DD" -> then it is interpreted as --date
+
+- "#tag" -> --tag
+
+- "^link" -> --link
+
+- if it starts with one of the five account types ("Assets", "Equity", "Expenses",
+  "Income", "Liabilities") -> --account
+
+- "key:value" -> --metadata
+
+- otherwise -> --somewhere
+
+Exit status:
+
+Exit status is 0 (success) if a match is found, 1 if no match is found, 2 if an error
+occurred.""",
 )
 @click.argument(
     "args",
