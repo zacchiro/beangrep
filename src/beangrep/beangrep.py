@@ -31,6 +31,42 @@ SKIP_INTERNALS = True
 TYPE_SEP = ","
 
 
+class Caseness(Enum):
+    """Case-matching policy."""
+
+    MATCH = 1
+    IGNORE = 2
+    SMART = 3
+
+    @classmethod
+    def from_cli(
+        cls, case_sensitive: bool, ignore_case: bool, smart_case: bool
+    ) -> Self:
+        """Create a CaseMatching enum from CLI arguments, applying overrides."""
+        if case_sensitive:
+            result = cls.MATCH
+        elif ignore_case:
+            result = cls.IGNORE
+        else:
+            result = cls.SMART
+        return cast(Self, result)
+
+    def ignore_case(self, s: str) -> bool:
+        """Check if caseness should be ignored for a given string."""
+        result = False
+        match self:
+            case self.MATCH:
+                result = False
+            case self.IGNORE:
+                result = True
+            case self.SMART:
+                if any(c.isupper() for c in s):
+                    result = False
+                else:
+                    result = True
+        return result
+
+
 class RelOp(Enum):
     """Relational comparison operator."""
 
@@ -251,7 +287,10 @@ class Criteria:
 
     @classmethod
     def guess(
-        cls, pattern: str, ignore_case: bool = False, base: Optional[Self] = None
+        cls,
+        pattern: str,
+        caseness: Caseness = Caseness.SMART,
+        base: Optional[Self] = None,
     ) -> Self:
         """Guess criteria from a single textual pattern, using heuristics.
 
@@ -267,6 +306,7 @@ class Criteria:
 
         """
         criteria = base if base is not None else cls()
+        ignore_case = caseness.ignore_case(pattern)
 
         if re.search(r"^\d{4}-\d{2}-\d{2}$", pattern):
             criteria.date = [DatePredicate.parse(f"={pattern}")]
@@ -290,7 +330,7 @@ class Criteria:
         return criteria
 
     @classmethod
-    def build(
+    def from_cli(
         cls,
         account_re,
         amount_preds,
@@ -302,21 +342,24 @@ class Criteria:
         somewhere_re,
         tag_re,
         type_pat,
-        ignore_case,
+        caseness,
         base: Optional[Self] = None,
     ) -> Self:
         """Build criteria from command line arguments."""
         criteria = base if base is not None else cls()
 
         if account_re is not None:
-            criteria.account = cls._re_compile(ignore_case, account_re)
+            criteria.account = cls._re_compile(
+                caseness.ignore_case(account_re), account_re
+            )
         if amount_preds is not None:
             criteria.amount = list(map(AmountPredicate.parse, amount_preds))
         if date_preds is not None:
             criteria.date = list(map(DatePredicate.parse, date_preds))
         if link_re is not None:
-            criteria.link = cls._re_compile(ignore_case, link_re)
+            criteria.link = cls._re_compile(caseness.ignore_case(link_re), link_re)
         if metadata_pat is not None:
+            ignore_case = caseness.ignore_case(metadata_pat)
             if KEY_VAL_SEP in metadata_pat:
                 (key_re, val_re) = metadata_pat.split(KEY_VAL_SEP, maxsplit=1)
             else:
@@ -326,13 +369,17 @@ class Criteria:
                 cls._re_compile(ignore_case, val_re),
             )
         if narration_re is not None:
-            criteria.narration = cls._re_compile(ignore_case, narration_re)
+            criteria.narration = cls._re_compile(
+                caseness.ignore_case(narration_re), narration_re
+            )
         if payee_re is not None:
-            criteria.payee = cls._re_compile(ignore_case, payee_re)
+            criteria.payee = cls._re_compile(caseness.ignore_case(payee_re), payee_re)
         if somewhere_re is not None:
-            criteria.somewhere = cls._re_compile(ignore_case, somewhere_re)
+            criteria.somewhere = cls._re_compile(
+                caseness.ignore_case(somewhere_re), somewhere_re
+            )
         if tag_re is not None:
-            criteria.tag = cls._re_compile(ignore_case, tag_re)
+            criteria.tag = cls._re_compile(caseness.ignore_case(tag_re), tag_re)
         if type_pat is not None:
             criteria.types = parse_types(type_pat)
 
@@ -839,12 +886,30 @@ occurred.""",
     "[default: transaction]",
 )
 @click.option(
-    "--ignore-case/--no-ignore-case",
+    "--case-sensitive",
+    "case_sensitive",
+    is_flag=True,
+    default=False,
+    help="Search case sensitively. Overrides: -i/--ignore-case and -S/--smart-case.",
+)
+@click.option(
+    "--ignore-case",
     "-i",
     "ignore_case",
+    is_flag=True,
     default=False,
+    help="""Search case insensitively. Overrides -S/--smart-case; overridden by
+--case-sensitive.""",
+)
+@click.option(
+    "--smart-case",
+    "-S",
+    "smart_case",
+    is_flag=True,
+    default=True,
     show_default=True,
-    help="Ignore case distinctions in string matches.",
+    help="""Search case insensitively if all criteria are lowercase, sensitively
+otherwise. Overridden by: --case-sensitive and -i/--ignore-case.""",
 )
 @click.option(
     "--posting-tags-meta",
@@ -891,7 +956,9 @@ def cli(
     somewhere_re,
     tag_re,
     type_pat,
+    case_sensitive,
     ignore_case,
+    smart_case,
     posting_tags_meta,
     quiet,
     skip_internals,
@@ -916,11 +983,12 @@ def cli(
             'Standard input ("-") cannot be specified multipled times'
         )
 
+    caseness = Caseness.from_cli(case_sensitive, ignore_case, smart_case)
     try:
         criteria = Criteria()  # start from default criteria
         if pattern is not None:  # override with smart pattern, if given as argument
-            criteria = Criteria.guess(pattern, ignore_case, base=criteria)
-        criteria = Criteria.build(  # override with explicit options, if any
+            criteria = Criteria.guess(pattern, caseness, base=criteria)
+        criteria = Criteria.from_cli(  # override with explicit options, if any
             account_re=account_re,
             amount_preds=(amount_preds or None),
             date_preds=(date_preds or None),
@@ -931,7 +999,7 @@ def cli(
             somewhere_re=somewhere_re,
             tag_re=tag_re,
             type_pat=type_pat,
-            ignore_case=ignore_case,
+            caseness=caseness,
             base=criteria,
         )
     except ValueError as e:

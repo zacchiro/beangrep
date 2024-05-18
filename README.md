@@ -121,9 +121,15 @@ Options:
                                   event, query, price, document, custom. The
                                   special value 'all' means: all directive
                                   types. [default: transaction]
-  -i, --ignore-case / --no-ignore-case
-                                  Ignore case distinctions in string matches.
-                                  [default: no-ignore-case]
+  --case-sensitive                Search case sensitively. Overrides:
+                                  -i/--ignore-case and -S/--smart-case.
+  -i, --ignore-case               Search case insensitively. Overrides
+                                  -S/--smart-case; overridden by --case-
+                                  sensitive.
+  -S, --smart-case                Search case insensitively if all criteria
+                                  are lowercase, sensitively otherwise.
+                                  Overridden by: --case-sensitive and
+                                  -i/--ignore-case.  [default: True]
   --posting-tags-meta TEXT        Metadata key used to attach tags to
                                   transaction postings.  [default: tags]
   -q, --quiet / --no-quiet        Quiet, do not write anything to standard

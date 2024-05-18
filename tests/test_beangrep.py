@@ -107,16 +107,22 @@ def test_pattern_guessing():
     assert Criteria.guess("2024-05").date is None
     assert Criteria.guess("2024").date is None
 
-    assert Criteria.guess("#some-tag").tag == re.compile("some-tag")
+    assert Criteria.guess("#some-tag").tag == re.compile("some-tag", re.IGNORECASE)
     assert Criteria.guess("some-tag").tag is None
 
-    assert Criteria.guess("^some-link").link == re.compile("some-link")
+    assert Criteria.guess("^some-link").link == re.compile("some-link", re.IGNORECASE)
     assert Criteria.guess("some-link").link is None
 
-    assert Criteria.guess("key:val").metadata == (re.compile("key"), re.compile("val"))
+    assert Criteria.guess("key:val").metadata == (
+        re.compile("key", re.IGNORECASE),
+        re.compile("val", re.IGNORECASE),
+    )
+    assert Criteria.guess("key:Val").metadata == (re.compile("key"), re.compile("Val"))
     assert Criteria.guess("key val").metadata is None
 
-    assert Criteria.guess("some text").somewhere == (re.compile("some text"))
+    assert Criteria.guess("some text").somewhere == (
+        re.compile("some text", re.IGNORECASE)
+    )
 
 
 def load_sample_ledger(filename=SAMPLE_LEDGER):
@@ -471,12 +477,30 @@ def test_cli_smart_pattern():
     assert result.exit_code == 1
 
 
-def test_cli_ignore_case():
+def test_cli_case_matching():
     """Test --ignore-case flag."""
     runner = CliRunner()
+
+    # Smart case:
     assert runner.invoke(cli, ["-p", "Uncle Boons", SAMPLE_LEDGER]).exit_code == 0
-    assert runner.invoke(cli, ["-p", "uncle boons", SAMPLE_LEDGER]).exit_code == 1
+    assert runner.invoke(cli, ["-p", "uncle boons", SAMPLE_LEDGER]).exit_code == 0
+    assert runner.invoke(cli, ["-S", "-p", "uncle boons", SAMPLE_LEDGER]).exit_code == 0
+    assert runner.invoke(cli, ["-S", "-p", "Uncle Boons", SAMPLE_LEDGER]).exit_code == 0
+    assert runner.invoke(cli, ["-S", "-p", "Uncle boons", SAMPLE_LEDGER]).exit_code == 1
+
+    # Case sensitive:
+    assert (
+        runner.invoke(cli, ["--case-sensitive", "-p", "Boons", SAMPLE_LEDGER]).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(cli, ["--case-sensitive", "-p", "boons", SAMPLE_LEDGER]).exit_code
+        == 1
+    )
+
+    # Case insensitive:
     assert runner.invoke(cli, ["-i", "-p", "uncle boons", SAMPLE_LEDGER]).exit_code == 0
+    assert runner.invoke(cli, ["-i", "-p", "Uncle boons", SAMPLE_LEDGER]).exit_code == 0
 
 
 def test_cli_quiet():
