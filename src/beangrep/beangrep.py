@@ -260,6 +260,7 @@ class Criteria:
         - "YYYY-MM-DD" -> date criteria
         - "#tag" -> tag criteria
         - "^link" -> link criteria
+        - "@payee" -> payee criteria
         - starting with an account type (Assets, Liabilities, etc.) -> account criteria
         - "key:value" -> metadata criteria
         - default -> somewhere criteria
@@ -271,6 +272,8 @@ class Criteria:
             criteria.date = [DatePredicate.parse(f"={pattern}")]
         elif re.search(r"^#[-\w]+$", pattern):
             criteria.tag = cls._re_compile(ignore_case, pattern[1:])
+        elif re.search(r"^@.+$", pattern):
+            criteria.payee = cls._re_compile(ignore_case, pattern[1:])
         elif re.search(r"^\^[-\w]+$", pattern):
             criteria.link = cls._re_compile(ignore_case, pattern[1:])
         elif re.search(r"^(Assets|Liabilities|Equity|Income|Expenses)", pattern):
@@ -722,6 +725,8 @@ tried in order, first match wins:
 - "#tag" -> --tag
 
 - "^link" -> --link
+
+- "@payee" -> --payee
 
 - if it starts with one of the five account types ("Assets", "Equity", "Expenses",
   "Income", "Liabilities") -> --account

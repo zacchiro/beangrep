@@ -452,6 +452,10 @@ def test_cli_smart_pattern():
     assert result.exit_code == 0
     assert "Mercadito" in result.output
 
+    result = runner.invoke(cli, ["@RiverBank", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "Paying the rent" in result.output
+
     result = runner.invoke(cli, ["Expenses:Vacation", SAMPLE_LEDGER])
     assert result.exit_code == 0
     assert "vacation days" in result.output

@@ -152,6 +152,8 @@ Options:
 
   - "^link" -> --link
 
+  - "@payee" -> --payee
+
   - if it starts with one of the five account types ("Assets", "Equity",
   "Expenses",   "Income", "Liabilities") -> --account
 
