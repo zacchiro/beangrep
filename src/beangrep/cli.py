@@ -315,12 +315,19 @@ def cli(
             logging.info("Loading ledger from %s...", filename)
             ledger = beancount.loader.load_file(filename)
 
-        if ledger[1]:  # Beancount encountered loading error(s), fail with diagnostic
-            raise click.BadArgumentUsage(
-                f'\nBeancount encountered error(s) when loading "{filename}":\n'
-                + "\n".join(str(err) for err in ledger[1]),
+        if ledger[1]:  # Beancount encountered loading error(s), warn user
+            logging.warning(
+                'Beancount encountered %d error(s) when loading "%s"',
+                len(ledger[1]),
+                filename,
             )
-        logging.debug("Input ledger contains %d entries", len(ledger[0]))
+            logging.info(
+                "Beancount errors:\n" + "\n".join(str(err) for err in ledger[1])
+            )
+        if not ledger[0]:  # No (valid) entries in journal, fail
+            ctx.fail("No valid entries found in input journal")
+        else:
+            logging.debug("Input journal contains %d (valid) entries", len(ledger[0]))
 
         for entry in filter_entries(
             ledger[0],
