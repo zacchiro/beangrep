@@ -306,18 +306,20 @@ def cli(
             # Beancount does not support streaming reading, so to mimic Unix filter
             # semantics we read stdin to the end and store it to a temporary file.
             with NamedTemporaryFile(prefix="beangrep.", suffix=".beancount") as tmpfile:
-                logging.info("Buffering stdin to temporary file %s...", tmpfile.name)
+                logging.info(
+                    'Buffering standard input to temporary file "%s"...', tmpfile.name
+                )
                 shutil.copyfileobj(sys.stdin.buffer, tmpfile.file)
                 tmpfile.flush()
-                logging.info("Loading ledger from %s...", tmpfile.name)
+                logging.info('Loading entries from file "%s"...', tmpfile.name)
                 ledger = beancount.loader.load_file(tmpfile.name)
         else:
-            logging.info("Loading ledger from %s...", filename)
+            logging.info('Loading entries from file "%s"...', filename)
             ledger = beancount.loader.load_file(filename)
 
         if ledger[1]:  # Beancount encountered loading error(s), warn user
             logging.warning(
-                'Beancount encountered %d error(s) when loading "%s"',
+                'Beancount encountered %d error(s) when loading file "%s"',
                 len(ledger[1]),
                 filename,
             )
@@ -325,9 +327,11 @@ def cli(
                 "Beancount errors:\n" + "\n".join(str(err) for err in ledger[1])
             )
         if not ledger[0]:  # No (valid) entries in journal, fail
-            ctx.fail("No valid entries found in input journal")
+            ctx.fail(f'No valid entries found in file "{filename}"')
         else:
-            logging.debug("Input journal contains %d (valid) entries", len(ledger[0]))
+            logging.debug(
+                'Loaded %d (valid) entries from file "%s"', filename, len(ledger[0])
+            )
 
         for entry in filter_entries(
             ledger[0],
