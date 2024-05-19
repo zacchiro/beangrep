@@ -16,12 +16,13 @@ from typing import Optional, Self, cast
 from beancount.core import data  # type: ignore
 from beancount.core.amount import Amount  # type: ignore
 
-KEY_VAL_SEP = ":"
 INTERNALS_META = set(["filename", "lineno"])
+KEY_VAL_SEP = ":"
 META_VAL_RE = ".*"
 POSTING_TAGS_META = "tags"
 POSTING_TAGS_SEP = ","
 SKIP_INTERNALS = True
+TYPES_DEFAULT = frozenset([data.Transaction])
 TYPE_SEP = ","
 
 
@@ -268,7 +269,7 @@ class Criteria:
     payees: list[re.Pattern] = field(default_factory=list)
     somewheres: list[re.Pattern] = field(default_factory=list)
     tags: list[re.Pattern] = field(default_factory=list)
-    types: frozenset[type] = frozenset([data.Transaction])
+    types: frozenset[type] = TYPES_DEFAULT
 
     @staticmethod
     def _re_compile(ignore_case: bool, s: str) -> re.Pattern:
@@ -339,10 +340,14 @@ class Criteria:
         tags,
         types,
         caseness,
+        invert_match,
         base: Optional[Self] = None,
     ) -> Self:
         """Build criteria from command line arguments."""
         criteria = base if base is not None else cls()
+        if invert_match and criteria.types == TYPES_DEFAULT:
+            # clear "--type transaction" default if "--invert-match"
+            criteria.types = frozenset()
 
         if accounts is not None:
             criteria.accounts.extend(
@@ -749,18 +754,33 @@ def parse_types(types_pat: str) -> frozenset[type]:
 def filter_entries(
     entries,
     criteria,
+    invert_match: bool = False,
     posting_tags_meta=POSTING_TAGS_META,
     skip_internals=SKIP_INTERNALS,
 ):
     """Filter entries to only return those that match criteria."""
     for entry in entries:
-        if entry_matches(
+        is_match = entry_matches(
             entry,
             criteria,
             posting_tags_meta=posting_tags_meta,
             skip_internals=skip_internals,
-        ):
-            logging.debug("Entry %s matches criteria, keeping it", entry)
-            yield entry
-        else:
-            logging.debug("Entry %s does not match criteria, skipping it", entry)
+        )
+        match (is_match, invert_match):
+            case (True, False):
+                logging.debug("Entry %s matches criteria, returning it", entry)
+                yield entry
+            case (False, False):
+                logging.debug("Entry %s does not match criteria, skipping it", entry)
+            case (True, True):
+                logging.debug(
+                    "Entry %s matches criteria, but invert match is on, skipping it",
+                    entry,
+                )
+            case (False, True):
+                logging.debug(
+                    "Entry %s does not match criteria, but invert match is on, "
+                    "returning it",
+                    entry,
+                )
+                yield entry

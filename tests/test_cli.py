@@ -124,6 +124,20 @@ def test_cli_exit_code():
     assert "TRUE" in result.output  # custom hit
 
 
+def test_cli_invert_match():
+    runner = CliRunner()
+    result = runner.invoke(cli, ["-a", "Expenses:Grocery", SAMPLE_LEDGER_SMALL])
+    assert result.exit_code == 0
+    result = runner.invoke(cli, ["-a", "Expenses:Software", SAMPLE_LEDGER_SMALL])
+    assert result.exit_code == 1
+    result = runner.invoke(
+        cli, ["--invert-match", "-n", "software", SAMPLE_LEDGER_SMALL]
+    )
+    assert result.exit_code == 0
+    result = runner.invoke(cli, ["-v", "-s", ".", SAMPLE_LEDGER_SMALL])
+    assert result.exit_code == 1
+
+
 def test_cli_smart_pattern():
     runner = CliRunner()
     result = runner.invoke(cli, ["2014-03-28", SAMPLE_LEDGER])

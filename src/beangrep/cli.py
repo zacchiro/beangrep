@@ -216,6 +216,17 @@ immediately if any match is found.""",
 includes the automatic metadata: {sorted(INTERNALS_META)}""",
 )
 @click.option(
+    "--invert-match",
+    "-v",
+    "invert_match",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="""Invert the sense of matching: return entries that do *not* match given
+criteria. This clears the default "--type transaction" criteria, to avoid only returning
+non-transaction entries by default.""",
+)
+@click.option(
     "--verbose",
     count=True,
     help="""Increase logging verbosity. Default verbosity is at WARNING level; passing
@@ -242,6 +253,7 @@ def cli(
     posting_tags_meta,
     quiet,
     skip_internals,
+    invert_match,
     verbose,
 ):
     match verbose:
@@ -280,11 +292,13 @@ def cli(
             tags=tags,
             types=types,
             caseness=caseness,
+            invert_match=invert_match,
             base=criteria,
         )
     except ValueError as e:
         raise click.UsageError(e.args[0]) from e
     logging.info("Using search criteria: %s", criteria)
+    logging.info("Invert match is %s", "on" if invert_match else "off")
 
     match_found = False
     for filename in filenames:
@@ -311,6 +325,7 @@ def cli(
         for entry in filter_entries(
             ledger[0],
             criteria,
+            invert_match=invert_match,
             posting_tags_meta=posting_tags_meta,
             skip_internals=skip_internals,
         ):
