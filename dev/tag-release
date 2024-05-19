@@ -15,4 +15,4 @@ shift 1
 
 git changelog --tag "$version" --no-merges --stdout \
 | grep -v "========" \
-| git tag --annotate --file=- --edit "$@" "$version"
+| git tag --annotate --sign --file=- --edit "$@" "$version"
