@@ -4,9 +4,11 @@
 Beangrep - grep-like filter for Beancount
 =========================================
 
-[Beangrep][beangrep-home] is a grep-like filter for the [Beancount][beancount-home] plain text accounting system.
+[Beangrep][beangrep-home] is a [grep][grep-wikipedia]-like filter for the
+[Beancount][beancount-home] plain text accounting system.
 
 [beangrep-home]: https://github.com/zacchiro/beangrep
+[grep-wikipedia]: https://en.wikipedia.org/wiki/Grep
 [beancount-home]: http://beancount.github.io/
 
 
