@@ -80,16 +80,16 @@ Options:
                                   Only return entries with amounts matching
                                   the given amount predicate. An amount
                                   predicate start with an optional comparison
-                                  operator (one of '<', '<=', '=', '>=', '>',
-                                  with '=' being the default), followed by a
-                                  decimal number (using '.' as decimal
+                                  operator (one of "<", "<=", "=", ">=", ">",
+                                  with "=" being the default), followed by a
+                                  decimal number (using "." as decimal
                                   separator), followed by an optional currency
                                   regex. Multiple amount predicates can be
                                   given to express complex amount ranges.
   -d, --date [OP]DATE             Only return entries with dates matching the
                                   given date predicate. A date predicate start
                                   with an optional comparison operator (one of
-                                  '<', '<=', '=', '>=', '>', with '=' being
+                                  "<", "<=", "=", ">=", ">", with "=" being
                                   the default), and is followed by a date in
                                   the form YYYY-[MM[-DD]]. Multiple date
                                   predicates can be given to express complex
@@ -100,10 +100,10 @@ Options:
                                   Only return entries with at least one
                                   metadata key/value pair matching given
                                   pattern. A pattern is a pair of regexs
-                                  separated by ':', the former matching on
+                                  separated by ":", the former matching on
                                   metadata key, the latter on metadata value.
-                                  "The second regex is optional and defaults
-                                  to '.*'.
+                                  The second regex is optional and defaults to
+                                  ".*".
   -n, --narration REGEX           Only return entries whose narrations match
                                   given regex.
   -p, --payee REGEX               Only return entries whose payees match given
@@ -140,6 +140,11 @@ Options:
                                   not visible in the ledger. This includes the
                                   automatic metadata: ['filename', 'lineno']
                                   [default: skip-internals]
+  -v, --invert-match              Invert the sense of matching: return entries
+                                  that do *not* match given criteria. This
+                                  clears the default "--type transaction"
+                                  criteria, to avoid only returning non-
+                                  transaction entries by default.
   --verbose                       Increase logging verbosity. Default
                                   verbosity is at WARNING level; passing this
                                   option once will increase it to INFO, twice
