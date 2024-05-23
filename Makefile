@@ -1,5 +1,6 @@
 BEANGREP_BIN = bin/bean-grep
 BEANGREP_PY = src/beangrep/beangrep.py
+CLI_PY = src/beangrep/cli.py
 DIST_DIR = dist
 MAN_EXTRAS = doc/man-extras.h2m
 MAN_PAGE = src/beangrep/data/bean-grep.1
@@ -10,10 +11,10 @@ UPDATE_README = dev/update-readme
 
 all: $(README) $(MAN_PAGE)
 
-$(README): $(BEANGREP_PY) $(UPDATE_README) Makefile
+$(README): $(BEANGREP_PY) $(CLI_PY) $(UPDATE_README) Makefile
 	$(UPDATE_README)
 
-$(MAN_PAGE): $(BEANGREP_PY) $(MAN_EXTRAS) Makefile
+$(MAN_PAGE): $(BEANGREP_PY) $(CLI_PY) $(MAN_EXTRAS) Makefile
 	help2man $(BEANGREP_BIN) --name "grep-like filter for Beancount" --no-info --include $(MAN_EXTRAS) --output $@
 
 check:
