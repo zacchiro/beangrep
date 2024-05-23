@@ -284,7 +284,7 @@ class Criteria:
     @classmethod
     def guess(
         cls,
-        pattern: str,
+        patterns: list[str],
         caseness: Caseness = Caseness.SMART,
         base: Optional[Self] = None,
     ) -> Self:

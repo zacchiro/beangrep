@@ -55,17 +55,17 @@ Usage
 The CLI says it all when invoked as `bean-grep --help`:
 
 ```
-Usage: bean-grep [OPTIONS] [PATTERN] FILENAME...
+Usage: bean-grep [OPTIONS] [PATTERNS] FILENAME...
 
   Search for entries matching given criteria in Beancount journals. Pretty
   print matching entries to standard output.
 
-  Search criteria can be specified with the options below and/or providing an
-  explicit "smart" PATTERN. If given, PATTERN is interpreted as described
-  below under "Patterns". If not given, search criteria are defined by
-  explicit options.
+  Search criteria can be specified with the options below and/or providing one
+  or more explicit "smart" PATTERNS. If given, PATTERNS is a newline-separated
+  list of patterns, each one interpreted as described below under "Patterns".
+  If not given, search criteria are defined by explicit options.
 
-  Multiple options, options given mutiple times, and PATTERN(s) are logically
+  Multiple options, options given mutiple times, and PATTERNS are logically
   joined (AND-ed) together.
 
   The granularity of matching (and results) is that of individual entries,
@@ -144,8 +144,8 @@ Options:
                                   match is found.  [default: no-quiet]
   --skip-internals / --no-skip-internals
                                   When matching, ignore internal information
-                                  not visible in the ledger. This includes the
-                                  automatic metadata: filename, lineno.
+                                  not visible in the journal. This includes
+                                  the automatic metadata: filename, lineno.
                                   [default: skip-internals]
   -v, --invert-match              Invert the sense of matching: return entries
                                   that do *not* match given criteria. This
@@ -161,7 +161,7 @@ Options:
 
   Patterns:
 
-  When given the "smart" PATTERN is interpreted according to the following
+  When given each "smart" PATTERN is interpreted according to the following
   heuristics, tried in order, first match wins:
 
   - if it is in the form "YYYY-MM-DD" -> then it is interpreted as --date

@@ -27,11 +27,12 @@ from .beangrep import (
     help="""Search for entries matching given criteria in Beancount journals. Pretty
 print matching entries to standard output.
 
-Search criteria can be specified with the options below and/or providing an explicit
-"smart" PATTERN. If given, PATTERN is interpreted as described below under "Patterns".
-If not given, search criteria are defined by explicit options.
+Search criteria can be specified with the options below and/or providing one or more
+explicit "smart" PATTERNS. If given, PATTERNS is a newline-separated list of patterns,
+each one interpreted as described below under "Patterns". If not given, search criteria
+are defined by explicit options.
 
-Multiple options, options given mutiple times, and PATTERN(s) are logically joined
+Multiple options, options given mutiple times, and PATTERNS are logically joined
 (AND-ed) together.
 
 The granularity of matching (and results) is that of individual entries, e.g., full
@@ -42,7 +43,7 @@ To read from standard input, pass "-" as FILENAME, but beware that it implies on
 buffering of stdin.""",
     epilog="""Patterns:
 
-When given the "smart" PATTERN is interpreted according to the following heuristics,
+When given each "smart" PATTERN is interpreted according to the following heuristics,
 tried in order, first match wins:
 
 - if it is in the form "YYYY-MM-DD" -> then it is interpreted as --date
@@ -69,7 +70,7 @@ occurred.""",
     "args",
     required=True,
     nargs=-1,
-    metavar="[PATTERN] FILENAME...",  # override metavar to show what is required
+    metavar="[PATTERNS] FILENAME...",  # override metavar to show what is required
 )
 @click.option(
     "--account",
@@ -222,7 +223,7 @@ immediately if any match is found.""",
     "skip_internals",
     default=True,
     show_default=True,
-    help=f"""When matching, ignore internal information not visible in the ledger. This
+    help=f"""When matching, ignore internal information not visible in the journal. This
 includes the automatic metadata: {", ".join(sorted(INTERNALS_META))}.""",
 )
 @click.option(
@@ -276,11 +277,15 @@ def cli(
             log_level = logging.DEBUG
     logging.basicConfig(level=log_level)
 
-    (pattern, filenames) = (None, [])
+    (patterns, filenames) = ([], [])
     if len(args) == 1:  # len(args) == 0 should not happen due to required=True
         filenames = list(args)
     elif len(args) >= 2:
-        (pattern, filenames) = (args[0], list(args[1:]))
+        filenames = list(args[1:])
+        if "\n" in args[0]:
+            patterns = args[0].split("\n")
+        else:
+            patterns = [args[0]]
     if len(list(filter(lambda fname: fname == "-", filenames))) > 1:
         raise click.BadArgumentUsage(
             'Standard input ("-") cannot be specified multipled times'
@@ -289,8 +294,8 @@ def cli(
     caseness = Caseness.from_cli(case_sensitive, ignore_case, smart_case)
     try:
         criteria = Criteria()  # start from default criteria
-        if pattern is not None:  # append smart pattern(s), if any
-            criteria = Criteria.guess(pattern, caseness, base=criteria)
+        if patterns:  # append smart patterns, if any
+            criteria = Criteria.guess(patterns, caseness, base=criteria)
         criteria = Criteria.from_cli(  # append explicit options, if any
             accounts=accounts,
             amounts=amounts,
