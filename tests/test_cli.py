@@ -9,7 +9,7 @@ from test_beangrep import SAMPLE_LEDGER, SAMPLE_LEDGER_SMALL
 from beangrep import cli
 
 
-def test_cli_basic():
+def test_basic():
     """Test basic CLI invocation."""
     runner = CliRunner()
     result = runner.invoke(cli, ["--help"])
@@ -33,7 +33,7 @@ def test_cli_basic():
     assert runner.invoke(cli, ["pattern", "-", "-"]).exit_code == 2  # stdin twice
 
 
-def test_cli_multiple_files():
+def test_multiple_files():
     runner = CliRunner()
     result = runner.invoke(cli, ["Opening", SAMPLE_LEDGER, SAMPLE_LEDGER_SMALL])
     assert result.exit_code == 0
@@ -49,7 +49,7 @@ def test_cli_multiple_files():
     assert result.exit_code == 0  # hit in SAMPLE_LEDGER_SMALL
 
 
-def test_cli_exit_code():
+def test_exit_code():
     """Test CLI exit code."""
     runner = CliRunner()
     result = runner.invoke(
@@ -124,7 +124,7 @@ def test_cli_exit_code():
     assert "TRUE" in result.output  # custom hit
 
 
-def test_cli_invert_match():
+def test_invert_match():
     runner = CliRunner()
     result = runner.invoke(cli, ["-a", "Expenses:Grocery", SAMPLE_LEDGER_SMALL])
     assert result.exit_code == 0
@@ -138,7 +138,7 @@ def test_cli_invert_match():
     assert result.exit_code == 1
 
 
-def test_cli_smart_pattern():
+def test_smart_pattern():
     runner = CliRunner()
     result = runner.invoke(cli, ["2014-03-28", SAMPLE_LEDGER])
     assert result.exit_code == 0
@@ -171,7 +171,7 @@ def test_cli_smart_pattern():
     assert result.exit_code == 1
 
 
-def test_cli_case_matching():
+def test_case_matching():
     """Test --ignore-case flag."""
     runner = CliRunner()
 
@@ -197,7 +197,7 @@ def test_cli_case_matching():
     assert runner.invoke(cli, ["-i", "-p", "Uncle boons", SAMPLE_LEDGER]).exit_code == 0
 
 
-def test_cli_conjunction():
+def test_conjunction():
     """Test logical conjunction of mutiple criteria."""
     runner = CliRunner()
     # Payee + date:
@@ -226,7 +226,7 @@ def test_cli_conjunction():
     )
 
 
-def test_cli_quiet():
+def test_quiet():
     """Test --quiet flag."""
     runner = CliRunner()
     result = runner.invoke(cli, ["--amount", "=76.81 USD", SAMPLE_LEDGER])
@@ -238,7 +238,7 @@ def test_cli_quiet():
     assert "76.81 USD" not in result.output
 
 
-def test_cli_stdin():
+def test_stdin():
     """Test reading from stdin passing "-" as filename."""
     runner = CliRunner()
     assert runner.invoke(cli, ["-p", "Uncle Boons", SAMPLE_LEDGER]).exit_code == 0
@@ -250,7 +250,7 @@ def test_cli_stdin():
         )
 
 
-def test_cli_errors():
+def test_errors():
     runner = CliRunner()
     assert runner.invoke(cli, ["does_not_exist.beancount"]).exit_code == 2
     assert (
