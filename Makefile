@@ -1,7 +1,7 @@
 BEANGREP_BIN = bin/bean-grep
 BEANGREP_PY = src/beangrep/beangrep.py
 DIST_DIR = dist
-MAN_EXTRAS = data/man-extras.h2m
+MAN_EXTRAS = doc/man-extras.h2m
 MAN_PAGE = src/beangrep/data/bean-grep.1
 README = README.md
 PYTHON = python3
