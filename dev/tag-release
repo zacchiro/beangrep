@@ -6,7 +6,7 @@
 # Depends: git-extras (/usr/bin/git-changelog)
 
 if [ -z "$1" ] ; then
-    echo "Usage:   tag-release VERSION [GIT_TAG_OPTIONS}"
+    echo "Usage:   tag-release VERSION [GIT_TAG_OPTIONS]"
     echo "Example: tag-release 3.1.4"
     exit 2
 fi
