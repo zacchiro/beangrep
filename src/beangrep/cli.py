@@ -213,7 +213,7 @@ immediately if any match is found.""",
     default=True,
     show_default=True,
     help=f"""When matching, ignore internal information not visible in the ledger. This
-includes the automatic metadata: {sorted(INTERNALS_META)}""",
+includes the automatic metadata: {", ".join(sorted(INTERNALS_META))}.""",
 )
 @click.option(
     "--invert-match",

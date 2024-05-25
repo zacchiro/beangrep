@@ -140,7 +140,7 @@ Options:
   --skip-internals / --no-skip-internals
                                   When matching, ignore internal information
                                   not visible in the ledger. This includes the
-                                  automatic metadata: ['filename', 'lineno']
+                                  automatic metadata: filename, lineno.
                                   [default: skip-internals]
   -v, --invert-match              Invert the sense of matching: return entries
                                   that do *not* match given criteria. This
