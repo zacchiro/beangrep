@@ -6,7 +6,7 @@ __license__ = "GPL-2.0-or-later"
 from click.testing import CliRunner
 from test_beangrep import SAMPLE_LEDGER, SAMPLE_LEDGER_SMALL
 
-from beangrep import cli
+from beangrep import _cli as cli
 
 
 def test_basic():
