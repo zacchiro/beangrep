@@ -6,11 +6,13 @@ __license__ = "GPL-2.0-or-later"
 import logging
 import shutil
 import sys
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import beancount.loader  # type: ignore
 import click
 from beancount.parser import printer  # type: ignore
+from xdg.BaseDirectory import xdg_config_home
 
 from .beangrep import (
     INTERNALS_META,
@@ -21,6 +23,38 @@ from .beangrep import (
     Criteria,
     filter_entries,
 )
+
+CONFFILE_PATH = Path(xdg_config_home) / "beangreprc"
+
+
+def load_conffile(path: Path) -> list[str]:
+    """Load a configuration file and return its content, as a list of strings (usually
+    CLI flags starting with "-").
+
+    """
+    logging.debug("Reading configuration flags from file: %s ...", path)
+    with open(path) as f:
+        flags = []
+        line_no = 0
+        for line in f.readlines():
+            line_no += 1
+            line = line.strip()
+            if not line:  # empty line, skip
+                continue
+            elif line.startswith("#"):  # comment, skip
+                continue
+            elif line.startswith("-"):  # flag, return it
+                flags.append(line)
+            else:  # invalid line, warn and skip it
+                logging.warning(
+                    'Line %d in configuration file %s is invalid (content: "%s"), '
+                    "ignoring it.",
+                    line_no,
+                    path,
+                    line,
+                )
+
+    return flags
 
 
 @click.command(
@@ -244,7 +278,7 @@ this option once will increase it to INFO, twice or more to DEBUG.""",
 )
 @click.version_option(None, "--version", "-V")
 @click.pass_context
-def cli(
+def _cli(
     ctx,
     args,
     accounts,
@@ -267,6 +301,7 @@ def cli(
     invert_match,
     verbose,
 ):
+    """CLI entry point, *after* processing options from configuration file."""
     match verbose:
         case 0:
             log_level = logging.WARNING
@@ -360,6 +395,17 @@ def cli(
 
     exit_status = 0 if match_found else 1
     ctx.exit(exit_status)
+
+
+def cli(*args, **kwargs):
+    """CLI entry point, *before* processing options from configuration file."""
+    if CONFFILE_PATH.is_file():
+        conf_flags = load_conffile(CONFFILE_PATH)
+        logging.info("Using configuration flags: %s", conf_flags)
+        if conf_flags:  # patch sys.argv with CLI flags from configuration file
+            sys.argv = [sys.argv[0]] + conf_flags + sys.argv[1:]
+
+    _cli(*args, **kwargs)
 
 
 if __name__ == "__main__":
