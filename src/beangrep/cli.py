@@ -330,7 +330,7 @@ def cli(
             ctx.fail(f'No valid entries found in file "{filename}"')
         else:
             logging.debug(
-                'Loaded %d (valid) entries from file "%s"', filename, len(ledger[0])
+                'Loaded %d (valid) entries from file "%s"', len(ledger[0]), filename
             )
 
         for entry in filter_entries(
