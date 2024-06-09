@@ -96,6 +96,11 @@ Options:
                                   the form YYYY-[MM[-DD]]. Multiple date
                                   predicates can be given to express complex
                                   date ranges.
+  -f, --flag REGEX                Only return transactions with at least one
+                                  flag matching the given regex (usually a
+                                  single character, properly escaped).  Both
+                                  transaction and posting flags are used for
+                                  matching.
   -l, --link REGEX                Only return entries with at least one link
                                   matching given regex.
   -m, --meta, --metadata REGEX[:REGEX]

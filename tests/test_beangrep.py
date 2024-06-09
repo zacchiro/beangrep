@@ -216,6 +216,14 @@ def test_date_filtering():
     )
 
 
+def test_flag_filtering():
+    l = load_sample_ledger()  # noqa:E741
+    assert grep_len(l, mk_criteria(flags=[re.compile("!")])) == 2
+    assert grep_len(l, mk_criteria(flags=[re.compile("#")])) == 3
+    assert grep_len(l, mk_criteria(flags=[re.compile(r"\*")])) == 1141
+    assert grep_len(l, mk_criteria(flags=[re.compile("%")])) == 0
+
+
 def test_link_filtering():
     l = load_sample_ledger()  # noqa:E741
     assert grep_len(l, mk_criteria(links=[re.compile("day-in-sfo")])) == 2

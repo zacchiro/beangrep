@@ -5121,7 +5121,7 @@ option "operating_currency" "USD"
   Assets:US:Hoogle:Vacation                             5 VACHR
   Income:US:Hoogle:Vacation                            -5 VACHR
 
-2014-01-02 * "Hoogle" "Payroll"
+2014-01-02 ! "Hoogle" "Payroll"
   Assets:US:BofA:Checking                         1350.60 USD
   Assets:US:Vanguard:Cash                         1200.00 USD
   Assets:US:Federal:PreTax401k                   -1200.00 IRAUSD
@@ -5141,7 +5141,7 @@ option "operating_currency" "USD"
   Assets:US:Hoogle:Vacation                             5 VACHR
   Income:US:Hoogle:Vacation                            -5 VACHR
 
-2014-01-16 * "Hoogle" "Payroll"
+2014-01-16 ! "Hoogle" "Payroll"
   Assets:US:BofA:Checking                         1350.60 USD
   Assets:US:Vanguard:Cash                         1200.00 USD
   Assets:US:Federal:PreTax401k                   -1200.00 IRAUSD
@@ -5181,7 +5181,7 @@ option "operating_currency" "USD"
   Assets:US:Hoogle:Vacation                             5 VACHR
   Income:US:Hoogle:Vacation                            -5 VACHR
 
-2014-02-13 * "Hoogle" "Payroll"
+2014-02-13 # "Hoogle" "Payroll"
   Assets:US:BofA:Checking                         1350.60 USD
   Assets:US:Vanguard:Cash                         1200.00 USD
   Assets:US:Federal:PreTax401k                   -1200.00 IRAUSD
@@ -5201,7 +5201,7 @@ option "operating_currency" "USD"
   Assets:US:Hoogle:Vacation                             5 VACHR
   Income:US:Hoogle:Vacation                            -5 VACHR
 
-2014-02-27 * "Hoogle" "Payroll"
+2014-02-27 # "Hoogle" "Payroll"
   Assets:US:BofA:Checking                         1350.60 USD
   Assets:US:Vanguard:Cash                         1200.00 USD
   Assets:US:Federal:PreTax401k                   -1200.00 IRAUSD
@@ -5221,7 +5221,7 @@ option "operating_currency" "USD"
   Assets:US:Hoogle:Vacation                             5 VACHR
   Income:US:Hoogle:Vacation                            -5 VACHR
 
-2014-03-13 * "Hoogle" "Payroll"
+2014-03-13 # "Hoogle" "Payroll"
   Assets:US:BofA:Checking                         1350.60 USD
   Assets:US:Vanguard:Cash                         1200.00 USD
   Assets:US:Federal:PreTax401k                   -1200.00 IRAUSD

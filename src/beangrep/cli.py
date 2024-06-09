@@ -103,6 +103,16 @@ with "=" being the default), and is followed by a date in the form YYYY-[MM[-DD]
 Multiple date predicates can be given to express complex date ranges.""",
 )
 @click.option(
+    "--flag",
+    "-f",
+    "flags",
+    metavar="REGEX",
+    multiple=True,
+    help="""Only return transactions with at least one flag matching the given regex
+    (usually a single character, properly escaped).  Both transaction and posting flags
+    are used for matching.""",
+)
+@click.option(
     "--link",
     "-l",
     "links",
@@ -240,6 +250,7 @@ def cli(
     accounts,
     amounts,
     dates,
+    flags,
     links,
     metadatas,
     narrations,
@@ -284,6 +295,7 @@ def cli(
             accounts=accounts,
             amounts=amounts,
             dates=dates,
+            flags=flags,
             links=links,
             metadatas=metadatas,
             narrations=narrations,

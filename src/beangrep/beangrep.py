@@ -263,6 +263,7 @@ class Criteria:
     accounts: list[re.Pattern] = field(default_factory=list)
     amounts: list[AmountPredicate] = field(default_factory=list)
     dates: list[DatePredicate] = field(default_factory=list)
+    flags: list[re.Pattern] = field(default_factory=list)
     links: list[re.Pattern] = field(default_factory=list)
     metadatas: list[tuple[re.Pattern, re.Pattern]] = field(default_factory=list)
     narrations: list[re.Pattern] = field(default_factory=list)
@@ -332,6 +333,7 @@ class Criteria:
         accounts,
         amounts,
         dates,
+        flags,
         links,
         metadatas,
         narrations,
@@ -357,6 +359,10 @@ class Criteria:
             criteria.amounts.extend(AmountPredicate.parse(s) for s in amounts)
         if dates is not None:
             criteria.dates.extend(DatePredicate.parse(s) for s in dates)
+        if flags is not None:
+            criteria.flags.extend(
+                cls._re_compile(caseness.ignore_case(s), s) for s in flags
+            )
         if links is not None:
             criteria.links.extend(
                 cls._re_compile(caseness.ignore_case(s), s) for s in links
@@ -454,6 +460,23 @@ def get_dates(entry: data.Directive) -> set[date]:
     return set((entry.date,))
 
 
+def get_flags(entry: data.Directive) -> set[str]:
+    """Return the flags of an entry, or the empty set if missing.
+
+    Note: always return the empty set for non-transaction entries.
+
+    """
+    flags = []
+    if isinstance(entry, data.Transaction):
+        if entry.flag:
+            flags.append(entry.flag)
+        for posting in entry.postings:
+            if posting.flag:
+                flags.append(posting.flag)
+
+    return set(flags)
+
+
 def get_links(entry: data.Directive) -> set[str]:
     """Return the links of an entry, or the empty set if missing."""
     return set(getattr(entry, "links", set()))
@@ -540,6 +563,7 @@ def get_strings(
     strings = strings.union(get_accounts(entry))
     strings = strings.union(str(a) for a in get_amounts(entry))
     strings = strings.union(str(d) for d in get_dates(entry))
+    strings = strings.union(get_flags(entry))
     strings = strings.union(get_links(entry))
     strings = strings.union(
         set(
@@ -595,6 +619,15 @@ def date_matches(entry: data.Directive, criteria: Iterable[DatePredicate]) -> bo
     ) and any(  # ... that matches all amount predicates
         all(date_pred.match(a) for date_pred in criteria) for a in dates
     )
+
+
+def flag_matches(entry: data.Directive, criteria: Iterable[re.Pattern]) -> bool:
+    """Check if a Beancount entry matches flags criteria.
+
+    Note: always return False for non-transaction entries.
+
+    """
+    return all(any(pat.search(flag) for flag in get_flags(entry)) for pat in criteria)
 
 
 def link_matches(entry: data.Directive, criteria: Iterable[re.Pattern]) -> bool:
@@ -684,6 +717,8 @@ def entry_matches(
         predicates.append(lambda e: amount_matches(e, criteria.amounts))
     if criteria.dates:
         predicates.append(lambda e: date_matches(e, criteria.dates))
+    if criteria.flags:
+        predicates.append(lambda e: flag_matches(e, criteria.flags))
     if criteria.links:
         predicates.append(lambda e: link_matches(e, criteria.links))
     if criteria.metadatas:

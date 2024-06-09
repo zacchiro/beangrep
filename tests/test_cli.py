@@ -66,6 +66,10 @@ def test_exit_code():
     assert result.exit_code == 0
     assert "Buying groceries" in result.output
 
+    result = runner.invoke(cli, ["--flag", "!", SAMPLE_LEDGER])
+    assert result.exit_code == 0
+    assert "Hoogle" in result.output
+
     result = runner.invoke(cli, ["--link", "^a-day-in", SAMPLE_LEDGER])
     assert result.exit_code == 0
     assert "Mercadito" in result.output
