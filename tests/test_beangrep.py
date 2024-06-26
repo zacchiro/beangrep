@@ -24,7 +24,7 @@ from beangrep import (
     parse_types,
 )
 
-DATA_DIR = Path(beangrep.__file__).parents[2] / "tests" / "data"
+DATA_DIR = Path(__file__).parent.resolve() / "data"
 SAMPLE_LEDGER = str(DATA_DIR / "example.beancount")
 SAMPLE_LEDGER_SMALL = str(DATA_DIR / "small.beancount")
 DIRECTIVES_IN_SAMPLE = 2247  # `bean-quey example.beancount` shows this
