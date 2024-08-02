@@ -75,6 +75,12 @@ Usage: bean-grep [OPTIONS] [PATTERN] FILENAME...
   To read from standard input, pass "-" as FILENAME, but beware that it
   implies on-disk buffering of stdin.
 
+  All options can be set via environment variables, which is most useful if
+  you want to override the defaults. Each environment variable
+  consists of the prefix BEANGREP_ followed by the option name in uppercase.
+  e.g. BEANGREP_VERBOSE, BEANGREP_CASE_SENSITIVE, BEANGREP_QUIET,
+  BEANGREP_NO_SKIP_INTERNALS, etc.
+
 Options:
   -a, --account REGEX             Only return entries referencing accounts
                                   with names matching given regex.

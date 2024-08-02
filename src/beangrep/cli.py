@@ -24,6 +24,7 @@ from .beangrep import (
 
 
 @click.command(
+    context_settings={"auto_envvar_prefix": "BEANGREP"},
     help="""Search for entries matching given criteria in Beancount journals. Pretty
 print matching entries to standard output.
 
