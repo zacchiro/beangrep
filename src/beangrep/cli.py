@@ -66,10 +66,14 @@ Exit status is 0 (success) if a match is found, 1 if no match is found, 2 if an 
 occurred.""",
 )
 @click.argument(
-    "args",
-    required=True,
+    "pattern",
+)
+@click.argument(
+    "filenames",
     nargs=-1,
-    metavar="[PATTERN] FILENAME...",  # override metavar to show what is required
+    required=True,
+    metavar="FILENAME",
+    envvar="BEANCOUNT_FILE"
 )
 @click.option(
     "--account",
@@ -246,7 +250,8 @@ this option once will increase it to INFO, twice or more to DEBUG.""",
 @click.pass_context
 def cli(
     ctx,
-    args,
+    pattern,
+    filenames,
     accounts,
     amounts,
     dates,
@@ -276,11 +281,6 @@ def cli(
             log_level = logging.DEBUG
     logging.basicConfig(level=log_level)
 
-    (pattern, filenames) = (None, [])
-    if len(args) == 1:  # len(args) == 0 should not happen due to required=True
-        filenames = list(args)
-    elif len(args) >= 2:
-        (pattern, filenames) = (args[0], list(args[1:]))
     if len(list(filter(lambda fname: fname == "-", filenames))) > 1:
         raise click.BadArgumentUsage(
             'Standard input ("-") cannot be specified multipled times'
