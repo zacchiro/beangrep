@@ -78,8 +78,10 @@ Usage: bean-grep [OPTIONS] [PATTERN] FILENAME...
   All options can be set via environment variables, which is most useful if
   you want to override the defaults. Each environment variable
   consists of the prefix BEANGREP_ followed by the option name in uppercase.
-  e.g. BEANGREP_VERBOSE, BEANGREP_CASE_SENSITIVE, BEANGREP_QUIET,
-  BEANGREP_NO_SKIP_INTERNALS, etc.
+  e.g., BEANGREP_VERBOSE, BEANGREP_CASE_SENSITIVE, BEANGREP_QUIET,
+  BEANGREP_NO_SKIP_INTERNALS, etc. Boolean options are enabled/disabled by
+  setting the corresponding variables to 1/0 respectively, e.g.,
+  BEANGREP_QUIET=1.
 
 Options:
   -a, --account REGEX             Only return entries referencing accounts
