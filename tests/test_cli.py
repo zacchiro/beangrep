@@ -253,10 +253,28 @@ def test_stdin():
             == 0
         )
 
-
 def test_errors():
     runner = CliRunner()
     assert runner.invoke(cli, ["does_not_exist.beancount"]).exit_code == 2
     assert (
         runner.invoke(cli, ["--amount", "%23 USD", SAMPLE_LEDGER]).exit_code == 2
     )  # invalid amount predicate
+
+# In theory any option could be set via envvars but let's just test the
+# most likely choices
+def test_envvars():
+    runner = CliRunner()
+
+    result = runner.invoke(cli, ["--amount", "=76.81 USD", SAMPLE_LEDGER], env={"BEANGREP_QUIET": "1"})
+    assert result.exit_code == 0
+    assert "76.81 USD" not in result.output
+
+    assert (
+        runner.invoke(cli, ["-p", "boons", SAMPLE_LEDGER], env={"BEANGREP_CASE_SENSITIVE": "1"}).exit_code
+        == 1
+    )
+
+    assert (
+        runner.invoke(cli, ["-n", "software", SAMPLE_LEDGER_SMALL], env={"BEANGREP_INVERT_MATCH": "1"}).exit_code
+        == 0
+    )
