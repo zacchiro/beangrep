@@ -6,6 +6,7 @@ __license__ = "GPL-2.0-or-later"
 import logging
 import shutil
 import sys
+import os
 from tempfile import NamedTemporaryFile
 
 import beancount.loader  # type: ignore
@@ -68,7 +69,6 @@ occurred.""",
 )
 @click.argument(
     "args",
-    required=True,
     nargs=-1,
     metavar="[PATTERN] FILENAME...",  # override metavar to show what is required
 )
@@ -278,10 +278,21 @@ def cli(
     logging.basicConfig(level=log_level)
 
     (pattern, filenames) = (None, [])
-    if len(args) == 1:  # len(args) == 0 should not happen due to required=True
-        filenames = list(args)
-    elif len(args) >= 2:
-        (pattern, filenames) = (args[0], list(args[1:]))
+    # click has has support for setting arguments via environment
+    # variables but I can't figure out how to make it work with
+    # beangrep's combination of optional pattern and variadic filenames.
+    # So we just roll it ourselves.
+    if os.getenv("BEANCOUNT_FILE"):
+        filenames = [os.getenv("BEANCOUNT_FILE")]
+        if len(args) == 1:
+            pattern = args[0]
+    else:
+        if len(args) == 0:
+            raise click.BadArgumentUsage("Must specify at least one beancount file.")
+        elif len(args) == 1:
+            filenames = list(args)
+        elif len(args) >= 2:
+            (pattern, filenames) = (args[0], list(args[1:]))
     if len(list(filter(lambda fname: fname == "-", filenames))) > 1:
         raise click.BadArgumentUsage(
             'Standard input ("-") cannot be specified multipled times'
