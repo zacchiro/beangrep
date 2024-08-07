@@ -75,6 +75,11 @@ Usage: bean-grep [OPTIONS] [PATTERN] FILENAME...
   To read from standard input, pass "-" as FILENAME, but beware that it
   implies on-disk buffering of stdin.
 
+  The FILENAME can alternatively be specified via the environment variable
+  BEANCOUNT_FILENAME. This allows not having to specify it explicitly every
+  time bean-grep is run. Only a single FILENAME is allowed to be specified
+  this way.
+
   All options can be set via environment variables, which is most useful if
   you want to override the defaults. Each environment variable
   consists of the prefix BEANGREP_ followed by the option name in uppercase.

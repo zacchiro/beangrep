@@ -264,7 +264,7 @@ def test_errors():
 
 # In theory any option could be set via envvars but let's just test the
 # most likely choices
-def test_envvars():
+def test_envvars_options():
     runner = CliRunner()
 
     result = runner.invoke(
@@ -288,3 +288,26 @@ def test_envvars():
         ).exit_code
         == 0
     )
+
+
+def test_envvar_beancount_file():
+    runner = CliRunner()
+
+    assert (
+        runner.invoke(
+            cli, env={"BEANCOUNT_FILENAME": "does_not_exist.beancount"}
+        ).exit_code
+        == 2
+    )
+
+    result = runner.invoke(
+        cli, ["--amount", "=76.81 USD"], env={"BEANCOUNT_FILENAME": SAMPLE_LEDGER}
+    )
+    assert result.exit_code == 0
+    assert "Verizon Wireless" in result.output
+
+    result = runner.invoke(
+        cli, ["^a-day-in"], env={"BEANCOUNT_FILENAME": SAMPLE_LEDGER}
+    )
+    assert result.exit_code == 0
+    assert "Mercadito" in result.output
