@@ -282,8 +282,8 @@ def cli(
     # variables but I can't figure out how to make it work with
     # beangrep's combination of optional pattern and variadic filenames.
     # So we just roll it ourselves.
-    if os.getenv("BEANCOUNT_FILE"):
-        filenames = [os.getenv("BEANCOUNT_FILE")]
+    if os.getenv("BEANCOUNT_FILENAME"):
+        filenames = [os.getenv("BEANCOUNT_FILENAME")]
         if len(args) == 1:
             pattern = args[0]
     else:
