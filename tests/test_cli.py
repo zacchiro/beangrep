@@ -294,16 +294,20 @@ def test_envvar_beancount_file():
     runner = CliRunner()
 
     assert (
-        runner.invoke(cli, env={"BEANCOUNT_FILE": "does_not_exist.beancount"}).exit_code
+        runner.invoke(
+            cli, env={"BEANCOUNT_FILENAME": "does_not_exist.beancount"}
+        ).exit_code
         == 2
     )
 
     result = runner.invoke(
-        cli, ["--amount", "=76.81 USD"], env={"BEANCOUNT_FILE": SAMPLE_LEDGER}
+        cli, ["--amount", "=76.81 USD"], env={"BEANCOUNT_FILENAME": SAMPLE_LEDGER}
     )
     assert result.exit_code == 0
     assert "Verizon Wireless" in result.output
 
-    result = runner.invoke(cli, ["^a-day-in"], env={"BEANCOUNT_FILE": SAMPLE_LEDGER})
+    result = runner.invoke(
+        cli, ["^a-day-in"], env={"BEANCOUNT_FILENAME": SAMPLE_LEDGER}
+    )
     assert result.exit_code == 0
     assert "Mercadito" in result.output
