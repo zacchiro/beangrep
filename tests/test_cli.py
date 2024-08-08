@@ -7,6 +7,7 @@ from click.testing import CliRunner
 from test_beangrep import SAMPLE_LEDGER, SAMPLE_LEDGER_SMALL
 
 from beangrep import cli
+import logging
 
 
 def test_basic():
@@ -311,3 +312,37 @@ def test_envvar_beancount_file():
     )
     assert result.exit_code == 0
     assert "Mercadito" in result.output
+
+
+def test_verbose_logging_info(caplog):
+    runner = CliRunner()
+    result = runner.invoke(cli, ["--verbose", "--amount", "25.67", SAMPLE_LEDGER])
+
+    # We don't want to assume too much about the debugging info
+    # generated but if we don't get ANYTHING then we probably
+    # broke the logging configuration somehow.
+    assert len(caplog.records) > 0
+
+    for record in caplog.records:
+        assert record.levelno == logging.INFO
+
+    assert result.exit_code == 0
+    assert "Goba Goba" in result.output
+
+
+def test_verbose_logging_debug(caplog):
+    runner = CliRunner()
+    result = runner.invoke(
+        cli, ["--verbose", "--verbose", "--amount", "25.67", SAMPLE_LEDGER]
+    )
+
+    # We don't want to assume too much about the debugging info
+    # generated but if we don't get ANYTHING then we probably
+    # broke the logging configuration somehow.
+    assert len(caplog.records) > 0
+
+    for record in caplog.records:
+        assert record.levelno in (logging.DEBUG, logging.INFO)
+
+    assert result.exit_code == 0
+    assert "Goba Goba" in result.output
