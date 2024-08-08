@@ -323,7 +323,6 @@ def test_verbose_logging_info(caplog):
     # broke the logging configuration somehow.
     assert len(caplog.records) > 0
 
-    # 
     for record in caplog.records:
         assert record.levelno == logging.INFO
 
