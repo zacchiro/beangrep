@@ -323,6 +323,7 @@ def test_verbose_logging_info(caplog):
     # broke the logging configuration somehow.
     assert len(caplog.records) > 0
 
+    # 
     for record in caplog.records:
         assert record.levelno == logging.INFO
 
@@ -340,6 +341,10 @@ def test_verbose_logging_debug(caplog):
     # generated but if we don't get ANYTHING then we probably
     # broke the logging configuration somehow.
     assert len(caplog.records) > 0
+
+    # Check that we got at least one DEBUG (i.e. not just all
+    # INFO via some misconfiguration of logging)
+    assert logging.DEBUG in [r.levelno for r in caplog.records]
 
     for record in caplog.records:
         assert record.levelno in (logging.DEBUG, logging.INFO)
