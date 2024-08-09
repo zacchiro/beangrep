@@ -290,6 +290,8 @@ def cli(
             log_level = logging.INFO
         case _:  # >= 2
             log_level = logging.DEBUG
+    logger = logging.getLogger(__name__)
+    logger.setLevel(log_level)
     logging.basicConfig(level=log_level)
 
     (pattern, filenames) = (None, [])
@@ -336,8 +338,8 @@ def cli(
         )
     except ValueError as e:
         raise click.UsageError(e.args[0]) from e
-    logging.info("Using search criteria: %s", criteria)
-    logging.info("Invert match is %s", "on" if invert_match else "off")
+    logger.info("Using search criteria: %s", criteria)
+    logger.info("Invert match is %s", "on" if invert_match else "off")
 
     match_found = False
     for filename in filenames:
@@ -345,30 +347,30 @@ def cli(
             # Beancount does not support streaming reading, so to mimic Unix filter
             # semantics we read stdin to the end and store it to a temporary file.
             with NamedTemporaryFile(prefix="beangrep.", suffix=".beancount") as tmpfile:
-                logging.info(
+                logger.info(
                     'Buffering standard input to temporary file "%s"...', tmpfile.name
                 )
                 shutil.copyfileobj(sys.stdin.buffer, tmpfile.file)
                 tmpfile.flush()
-                logging.info('Loading entries from file "%s"...', tmpfile.name)
+                logger.info('Loading entries from file "%s"...', tmpfile.name)
                 ledger = beancount.loader.load_file(tmpfile.name)
         else:
-            logging.info('Loading entries from file "%s"...', filename)
+            logger.info('Loading entries from file "%s"...', filename)
             ledger = beancount.loader.load_file(filename)
 
         if ledger[1]:  # Beancount encountered loading error(s), warn user
-            logging.warning(
+            logger.warning(
                 'Beancount encountered %d error(s) when loading file "%s"',
                 len(ledger[1]),
                 filename,
             )
-            logging.info(
+            logger.info(
                 "Beancount errors:\n" + "\n".join(str(err) for err in ledger[1])
             )
         if not ledger[0]:  # No (valid) entries in journal, fail
             ctx.fail(f'No valid entries found in file "{filename}"')
         else:
-            logging.debug(
+            logger.debug(
                 'Loaded %d (valid) entries from file "%s"', len(ledger[0]), filename
             )
 
