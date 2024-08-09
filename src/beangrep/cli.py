@@ -277,6 +277,7 @@ def cli(
             log_level = logging.DEBUG
     logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
+    logging.basicConfig(level=log_level)
 
     (pattern, filenames) = (None, [])
     # click has has support for setting arguments via environment
