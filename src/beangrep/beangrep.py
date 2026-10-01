@@ -165,6 +165,12 @@ class DatePredicate:
     month: Optional[int] = None
     day: Optional[int] = None
 
+    def __post_init__(self):
+        try:  # validate the predicate early, before matching starts
+            self.date_range()
+        except OverflowError as e:
+            raise ValueError("date out of range") from e
+
     def date_range(self) -> tuple[Optional[date], Optional[date]]:
         """Return the min/max valid dates (inclusive) for the predicate.
 
@@ -253,7 +259,10 @@ class DatePredicate:
             if k in matches:
                 matches[k] = int(matches[k])
 
-        return cls(**matches)  # type: ignore  # too dynamic to type properly
+        try:
+            return cls(**matches)  # type: ignore  # too dynamic to type properly
+        except ValueError as e:
+            raise ValueError(f'invalid date predicate "{s}": {e}') from e
 
 
 @dataclass
@@ -279,7 +288,10 @@ class Criteria:
         if ignore_case:
             re_flags = re.IGNORECASE
 
-        return re.compile(s, flags=re_flags)
+        try:
+            return re.compile(s, flags=re_flags)
+        except re.error as e:
+            raise ValueError(f'invalid regular expression "{s}": {e}') from e
 
     @classmethod
     def guess(
@@ -305,7 +317,7 @@ class Criteria:
         ignore_case = caseness.ignore_case(pattern)
 
         if re.search(r"^\d{4}-\d{2}-\d{2}$", pattern):
-            criteria.dates.append(DatePredicate.parse(f"={pattern}"))
+            criteria.dates.append(DatePredicate.parse(pattern))
         elif re.search(r"^#[-\w]+$", pattern):
             criteria.tags.append(cls._re_compile(ignore_case, pattern[1:]))
         elif re.search(r"^@.+$", pattern):

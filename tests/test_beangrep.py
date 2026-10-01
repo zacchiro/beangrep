@@ -98,6 +98,18 @@ def test_date_predicate_parse_error():
         assert DatePredicate.parse("=2014-01-01-01")
     with pytest.raises(ValueError):
         assert DatePredicate.parse("/2014-01")
+    # syntactically valid, but not existing dates
+    for invalid in ("2024-13", "2024-02-30", "0000", ">9999", "<0001-01-01"):
+        with pytest.raises(ValueError):
+            DatePredicate.parse(invalid)
+
+
+def test_invalid_regex():
+    """Test that invalid regexes are reported as ValueError."""
+    with pytest.raises(ValueError):
+        Criteria.guess("@*")
+    with pytest.raises(ValueError):
+        Criteria.guess("(")
 
 
 def test_pattern_guessing():

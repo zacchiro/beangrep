@@ -261,6 +261,17 @@ def test_errors():
     assert (
         runner.invoke(cli, ["--amount", "%23 USD", SAMPLE_LEDGER]).exit_code == 2
     )  # invalid amount predicate
+    for args in (
+        ["-d", "2024-13-01"],  # invalid month
+        ["2024-02-30"],  # invalid day, via smart pattern
+        ["-d", ">9999"],  # date overflow
+        ["-n", "*"],  # invalid regex
+        ["("],  # invalid regex, via smart pattern
+    ):
+        result = runner.invoke(cli, args + [SAMPLE_LEDGER])
+        assert result.exit_code == 2
+        assert "Traceback" not in result.output
+        assert result.exception is None or isinstance(result.exception, SystemExit)
 
 
 # In theory any option could be set via envvars but let's just test the
