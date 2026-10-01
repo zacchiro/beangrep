@@ -416,14 +416,14 @@ def get_accounts(entry: data.Directive) -> set[str]:
 
     """
     accounts = []
-    match type(entry):
+    match entry:
         case (
-            data.Open | data.Close | data.Balance | data.Note | data.Document
+            data.Open() | data.Close() | data.Balance() | data.Note() | data.Document()
         ) if entry.account is not None:
             accounts.append(entry.account)
-        case data.Pad:
+        case data.Pad():
             accounts.extend([entry.account, entry.source_account])
-        case data.Transaction:
+        case data.Transaction():
             accounts.extend(p.account for p in entry.postings)
 
     return set(accounts)
@@ -440,12 +440,12 @@ def get_amounts(entry: data.Directive) -> set[Amount]:
 
     """
     amounts = []
-    match type(entry):
-        case data.Balance | data.Price:
+    match entry:
+        case data.Balance() | data.Price():
             if hasattr(entry, "amount"):
                 amounts.append(entry.amount)
-        case data.Transaction:
-            amounts.extend(p.units for p in entry.postings)
+        case data.Transaction():
+            amounts.extend(p.units for p in entry.postings if p.units is not None)
 
     return set(amounts)
 
@@ -578,16 +578,16 @@ def get_strings(
         strings.add(s)
     strings = strings.union(get_tags(entry, posting_tags_meta=posting_tags_meta))
     strings.add(TYPE_TO_STR[type(entry)])
-    match type(entry):
-        case data.Note:
+    match entry:
+        case data.Note():
             strings.add(entry.comment)
-        case data.Event:
+        case data.Event():
             strings = strings.union(set([entry.type, entry.description]))
-        case data.Query:
+        case data.Query():
             strings = strings.union(set([entry.name, entry.query_string]))
-        case data.Document:
+        case data.Document():
             strings.add(entry.filename)
-        case data.Custom:
+        case data.Custom():
             strings.add(entry.type)
             strings = strings.union(set(str(v) for v in entry.values))
 
@@ -779,7 +779,7 @@ def parse_types(types_pat: str) -> frozenset[type]:
 
     types: list[type] = []
     if types_pat == "all":
-        types = data.ALL_DIRECTIVES
+        types = list(data.ALL_DIRECTIVES)
     else:
         types = [parse_type(s) for s in types_pat.strip().split(TYPE_SEP)]
 
