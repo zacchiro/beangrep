@@ -175,16 +175,24 @@ Options:
 
   - if it is in the form "YYYY-MM-DD" -> then it is interpreted as --date
 
-  - "#tag" -> --tag
+  - "#tag" -> --tag, if tag is made only of characters allowed in Beancount
+  tags (letters, digits, "-", "_", "/", "."); use --tag for arbitrary tag
+  regexes
 
-  - "^link" -> --link
+  - "^link" -> --link, with the same restriction as tags; use --link for
+  arbitrary link regexes
 
   - "@payee" -> --payee
 
   - if it starts with one of the five account types ("Assets", "Equity",
-  "Expenses",   "Income", "Liabilities") -> --account
+  "Expenses", "Income", "Liabilities"), capitalized as shown -> --account;
+  e.g., "assets:cash" is not an account search, but a metadata one
 
-  - "key:value" -> --metadata
+  - "key:value" -> --metadata, if key is a valid Beancount metadata key (a
+  lowercase letter, followed by letters, digits, "-", "_"); value is any regex
+  without whitespace and not starting with "//" (so that, e.g., URLs are
+  --somewhere searches), possibly empty ("key:") to match any value; use
+  --metadata for values containing spaces
 
   - otherwise -> --somewhere
 

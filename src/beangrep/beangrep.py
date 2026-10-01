@@ -331,11 +331,14 @@ class Criteria:
         Heuristics (ordered by priority):
 
         - "YYYY-MM-DD" -> date criteria
-        - "#tag" -> tag criteria
-        - "^link" -> link criteria
+        - "#tag" -> tag criteria (tag made of Beancount tag characters)
+        - "^link" -> link criteria (link made of Beancount link characters)
         - "@payee" -> payee criteria
-        - starting with an account type (Assets, Liabilities, etc.) -> account criteria
-        - "key:value" -> metadata criteria
+        - starting with an account type (Assets, Liabilities, etc., case-sensitive)
+          -> account criteria
+        - "key:value" -> metadata criteria (key in Beancount metadata key syntax, value
+          any regex without whitespace and not starting with "//", possibly empty to
+          match any value)
         - default -> somewhere criteria
 
         """
@@ -344,15 +347,17 @@ class Criteria:
 
         if re.search(r"^\d{4}-\d{2}-\d{2}$", pattern):
             criteria.dates.append(DatePredicate.parse(pattern))
-        elif re.search(r"^#[-\w]+$", pattern):
+        elif re.search(r"^#[A-Za-z0-9\-_/.]+$", pattern):
             criteria.tags.append(cls._re_compile(ignore_case, pattern[1:]))
         elif re.search(r"^@.+$", pattern):
             criteria.payees.append(cls._re_compile(ignore_case, pattern[1:]))
-        elif re.search(r"^\^[-\w]+$", pattern):
+        elif re.search(r"^\^[A-Za-z0-9\-_/.]+$", pattern):
             criteria.links.append(cls._re_compile(ignore_case, pattern[1:]))
         elif re.search(r"^(Assets|Liabilities|Equity|Income|Expenses)", pattern):
             criteria.accounts.append(cls._re_compile(ignore_case, pattern))
-        elif m := re.search(r"(?P<key>\w+):(?P<val>\w+)$", pattern):
+        elif m := re.search(
+            r"^(?P<key>[a-z][A-Za-z0-9\-_]*):(?!//)(?P<val>\S*)$", pattern
+        ):
             matches = m.groupdict()
             criteria.metadatas.append(
                 (

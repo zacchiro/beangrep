@@ -169,6 +169,43 @@ def test_pattern_guessing():
     ]
 
 
+def test_pattern_guessing_gaps():
+    """Test smart pattern heuristics on Beancount syntax corner cases."""
+    i = re.IGNORECASE
+
+    # tags and links may contain "/" and "."
+    assert Criteria.guess("#trip/2024.q1").tags == [re.compile("trip/2024.q1", i)]
+    assert Criteria.guess("^inv/2024.01").links == [re.compile("inv/2024.01", i)]
+    # regex syntax is not guessed as tag/link
+    assert Criteria.guess("#trip.*").tags == []
+    assert Criteria.guess("#trip.*").somewheres == [re.compile("#trip.*", i)]
+
+    # metadata keys are anchored at the start, and must be valid Beancount keys
+    assert Criteria.guess("buy milk:x").metadatas == []
+    assert Criteria.guess("buy milk:x").somewheres == [re.compile("buy milk:x", i)]
+    assert Criteria.guess("Key:val").metadatas == []  # keys start lowercase
+    assert Criteria.guess("invoice-no:2024-.*").metadatas == [
+        (re.compile("invoice-no", i), re.compile("2024-.*", i))
+    ]
+    assert Criteria.guess("receipt:").metadatas == [  # any value
+        (re.compile("receipt", i), re.compile("", i))
+    ]
+    # values with whitespace or starting with "//" (URLs) are not metadata
+    for pattern in ["note: call bank", "desc:coffee shop", "https://example.com"]:
+        assert Criteria.guess(pattern).metadatas == []
+        assert Criteria.guess(pattern).somewheres == [re.compile(pattern, i)]
+    assert Criteria.guess("path:/home/me").metadatas == [
+        (re.compile("path", i), re.compile("/home/me", i))
+    ]
+
+    # account types are case-sensitive
+    assert Criteria.guess("Assets:Cash").accounts == [re.compile("Assets:Cash")]
+    assert Criteria.guess("assets:cash").accounts == []
+    assert Criteria.guess("assets:cash").metadatas == [
+        (re.compile("assets", i), re.compile("cash", i))
+    ]
+
+
 def load_sample_ledger(filename=SAMPLE_LEDGER):
     """Test helper to load a sample ledger from file."""
     return beancount.loader.load_file(filename)[0]
