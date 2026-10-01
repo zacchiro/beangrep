@@ -325,6 +325,41 @@ def test_somewhere_filtering():
     )  # event description
 
 
+SOMEWHERE_LEDGER = """
+2024-01-01 open Assets:Broker HOOL
+2024-01-01 open Assets:Cash
+2024-01-01 commodity HOOL
+2024-01-01 price HOOL 105 USD
+
+2024-01-02 * "Buy"
+  Assets:Broker  10 HOOL {100 USD, 2023-12-31, "lot1"} @@ 1100 USD
+  Assets:Cash
+
+2024-01-03 custom "budget" Assets:Cash "monthly" 100 USD
+"""
+
+
+def test_somewhere_currencies_costs_customs():
+    """Test --somewhere on currencies, posting costs/prices, and custom values."""
+    (l, errors, _) = beancount.loader.load_string(SOMEWHERE_LEDGER)  # noqa:E741
+    assert not errors
+
+    def s(regex, types=data.ALL_DIRECTIVES):
+        return grep_len(l, mk_criteria(somewheres=[re.compile(regex)], types=types))
+
+    assert s("^HOOL$", [data.Open]) == 1  # open currency constraint
+    assert s("^HOOL$", [data.Commodity]) == 1  # commodity currency
+    assert s("^HOOL$", [data.Price]) == 1  # price base currency
+    assert s("^100 USD$", [data.Transaction]) == 1  # posting cost
+    assert s("^2023-12-31$", [data.Transaction]) == 1  # cost date
+    assert s("^lot1$", [data.Transaction]) == 1  # cost label
+    assert s("^110 USD$", [data.Transaction]) == 1  # posting price, per unit
+    assert s("^Assets:Cash$", [data.Custom]) == 1  # custom values
+    assert s("^monthly$", [data.Custom]) == 1
+    assert s("^100 USD$", [data.Custom]) == 1
+    assert s("ValueType|class", [data.Custom]) == 0  # no tuple repr leaks
+
+
 def test_tag_filtering():
     l = load_sample_ledger()  # noqa:E741
     assert grep_len(l, mk_criteria(tags=[re.compile("^trip-new-york-2014$")])) == 45

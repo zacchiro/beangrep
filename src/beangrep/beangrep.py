@@ -567,7 +567,9 @@ def get_strings(
 
     Strings extracted include: account names, amounts (converted to strings), dates
     (converted to strings), metadata (both keys and values), narrations and payees (for
-    transactions), tags.
+    transactions), tags, posting costs (amount, date, label) and prices, currencies (of
+    commodity, price, and open directives), and the type-specific fields of the other
+    directives (note comments, event and custom values, etc.).
 
     """
     strings: set[str] = set()
@@ -591,6 +593,25 @@ def get_strings(
     strings = strings.union(get_tags(entry, posting_tags_meta=posting_tags_meta))
     strings.add(TYPE_TO_STR[type(entry)])
     match entry:
+        case data.Transaction():
+            for posting in entry.postings:
+                if (cost := posting.cost) is not None:
+                    # Cost (with a per-unit number) after booking, CostSpec before
+                    number = cost.number if isinstance(cost, data.Cost) else None
+                    if number is not None and cost.currency is not None:
+                        strings.add(str(Amount(number, cost.currency)))
+                    elif cost.currency is not None:
+                        strings.add(cost.currency)
+                    if cost.date is not None:
+                        strings.add(str(cost.date))
+                    if cost.label is not None:
+                        strings.add(cost.label)
+                if posting.price is not None:
+                    strings.add(str(posting.price))
+        case data.Open():
+            strings = strings.union(entry.currencies or [])
+        case data.Commodity() | data.Price():
+            strings.add(entry.currency)
         case data.Note():
             strings.add(entry.comment)
         case data.Event():
@@ -601,7 +622,7 @@ def get_strings(
             strings.add(entry.filename)
         case data.Custom():
             strings.add(entry.type)
-            strings = strings.union(set(str(v) for v in entry.values))
+            strings = strings.union(set(str(v.value) for v in entry.values))
 
     return strings
 
