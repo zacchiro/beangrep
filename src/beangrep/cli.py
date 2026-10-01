@@ -23,6 +23,31 @@ from .beangrep import (
     filter_entries,
 )
 
+STDIN_NAME = "(standard input)"
+
+
+def report(*parts: str) -> None:
+    """Report a problem on stderr, grep-style: "bean-grep: FILE: MESSAGE"."""
+    click.echo(": ".join(["bean-grep", *parts]), err=True)
+
+
+def format_error(err, loaded_name: str, display_name: str) -> str:
+    """Format a Beancount error as "FILE[:LINE]: MESSAGE".
+
+    FILE is the one Beancount reports, which may be an included file; display_name
+    replaces it when it is the file loaded as loaded_name, or a pseudo-filename.
+
+    """
+    source = err.source or {}
+    err_file = source.get("filename") or ""
+    if err_file.startswith("<") or (  # pseudo-filename, e.g. "<load>"
+        os.path.abspath(err_file) == os.path.abspath(loaded_name)
+    ):
+        err_file = display_name
+    if lineno := source.get("lineno"):
+        return f"{err_file}:{lineno}: {err.message}"
+    return f"{err_file}: {err.message}"
+
 
 @click.command(
     context_settings={"auto_envvar_prefix": "BEANGREP"},
@@ -80,7 +105,9 @@ is run. Only a single FILENAME is allowed to be specified this way.
 Exit status:
 
 Exit status is 0 (success) if a match is found, 1 if no match is found, 2 if an error
-occurred.""",
+occurred. An error that occurs on some files does not stop processing the remaining
+ones, but still results in exit status 2, unless --quiet is used and a match is
+found.""",
 )
 @click.argument(
     "args",
@@ -342,40 +369,53 @@ def cli(
     logger.info("Invert match is %s", "on" if invert_match else "off")
 
     match_found = False
+    error_found = False
     for filename in filenames:
-        if filename == "-":
-            # Beancount does not support streaming reading, so to mimic Unix filter
-            # semantics we read stdin to the end and store it to a temporary file.
-            with NamedTemporaryFile(prefix="beangrep.", suffix=".beancount") as tmpfile:
-                logger.info(
-                    'Buffering standard input to temporary file "%s"...', tmpfile.name
-                )
-                shutil.copyfileobj(sys.stdin.buffer, tmpfile.file)
-                tmpfile.flush()
-                logger.info('Loading entries from file "%s"...', tmpfile.name)
-                ledger = beancount.loader.load_file(tmpfile.name)
-        else:
-            logger.info('Loading entries from file "%s"...', filename)
-            ledger = beancount.loader.load_file(filename)
+        display_name = STDIN_NAME if filename == "-" else filename
+        loaded_name = filename  # name of the file actually loaded by Beancount
+        try:
+            if filename == "-":
+                # Beancount does not support streaming reading, so to mimic Unix filter
+                # semantics we read stdin to the end and store it to a temporary file.
+                with NamedTemporaryFile(
+                    prefix="beangrep.", suffix=".beancount"
+                ) as tmpfile:
+                    logger.info(
+                        'Buffering standard input to temporary file "%s"...',
+                        tmpfile.name,
+                    )
+                    shutil.copyfileobj(sys.stdin.buffer, tmpfile.file)
+                    tmpfile.flush()
+                    loaded_name = tmpfile.name
+                    logger.info('Loading entries from file "%s"...', tmpfile.name)
+                    (entries, errors, _) = beancount.loader.load_file(tmpfile.name)
+            else:
+                logger.info('Loading entries from file "%s"...', filename)
+                (entries, errors, _) = beancount.loader.load_file(filename)
+        except OSError as e:  # e.g., directory or unreadable file
+            report(display_name, e.strerror or str(e))
+            error_found = True
+            continue
 
-        if ledger[1]:  # Beancount encountered loading error(s), warn user
-            logger.warning(
-                'Beancount encountered %d error(s) when loading file "%s"',
-                len(ledger[1]),
-                filename,
+        if errors and not entries:  # file could not be loaded at all, fail
+            for err in errors:
+                report(format_error(err, loaded_name, display_name))
+            error_found = True
+            continue
+        elif errors:  # Beancount encountered loading error(s), warn user
+            hint = "" if verbose else " (use --verbose to see them)"
+            report(
+                display_name,
+                f"{len(errors)} Beancount error(s) when loading{hint}",
             )
             logger.info(
-                "Beancount errors:\n" + "\n".join(str(err) for err in ledger[1])
+                "Beancount errors:\n"
+                + "\n".join(format_error(e, loaded_name, display_name) for e in errors)
             )
-        if not ledger[0]:  # No (valid) entries in journal, fail
-            ctx.fail(f'No valid entries found in file "{filename}"')
-        else:
-            logger.debug(
-                'Loaded %d (valid) entries from file "%s"', len(ledger[0]), filename
-            )
+        logger.debug('Loaded %d (valid) entries from file "%s"', len(entries), filename)
 
         for entry in filter_entries(
-            ledger[0],
+            entries,
             criteria,
             invert_match=invert_match,
             posting_tags_meta=posting_tags_meta,
@@ -387,7 +427,10 @@ def cli(
             else:
                 printer.print_entry(entry)
 
-    exit_status = 0 if match_found else 1
+    if error_found and not (quiet and match_found):
+        exit_status = 2
+    else:
+        exit_status = 0 if match_found else 1
     ctx.exit(exit_status)
 
 

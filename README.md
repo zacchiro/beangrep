@@ -197,7 +197,9 @@ Options:
   Exit status:
 
   Exit status is 0 (success) if a match is found, 1 if no match is found, 2 if
-  an error occurred.
+  an error occurred. An error that occurs on some files does not stop
+  processing the remaining ones, but still results in exit status 2, unless
+  --quiet is used and a match is found.
 ```
 
 

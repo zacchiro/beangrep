@@ -274,6 +274,54 @@ def test_errors():
         assert result.exception is None or isinstance(result.exception, SystemExit)
 
 
+def test_file_errors(tmp_path):
+    """Test reporting of files that cannot be loaded, or load with errors."""
+    runner = CliRunner()
+    empty = tmp_path / "empty.beancount"
+    empty.write_text("")
+    garbage = tmp_path / "garbage.beancount"
+    garbage.write_text("foo bar\n")
+    with_errors = tmp_path / "errors.beancount"
+    with_errors.write_text(
+        "2024-01-01 open Assets:Cash\n2024-01-02 balance Assets:Cash 5 EUR\n"
+    )
+    missing = str(tmp_path / "missing.beancount")
+
+    # empty ledger: not an error, just no match
+    result = runner.invoke(cli, ["Cash", str(empty)])
+    assert result.exit_code == 1
+    assert result.output == ""
+
+    # unloadable files are reported with the actual error, and do not stop processing
+    for bad, message in [
+        (missing, "does not exist"),
+        (str(tmp_path), "Is a directory"),
+        (str(garbage), "garbage.beancount:1: Invalid token"),
+    ]:
+        result = runner.invoke(cli, ["Opening", bad, SAMPLE_LEDGER_SMALL])
+        assert result.exit_code == 2  # error, even if a match was found
+        assert message in result.output
+        assert "Usage:" not in result.output
+        assert "Assets:Checking" in result.output  # match in the following file
+        assert result.exception is None or isinstance(result.exception, SystemExit)
+
+    # -q: a match wins over errors
+    assert (
+        runner.invoke(cli, ["-q", "Opening", missing, SAMPLE_LEDGER_SMALL]).exit_code
+        == 0
+    )
+    assert (
+        runner.invoke(cli, ["-q", "nomatch", missing, SAMPLE_LEDGER_SMALL]).exit_code
+        == 2
+    )
+
+    # loading errors in a valid ledger: warning only, details with --verbose
+    result = runner.invoke(cli, ["-T", "open", "Cash", str(with_errors)])
+    assert result.exit_code == 0
+    assert "1 Beancount error(s) when loading (use --verbose" in result.output
+    assert "Balance failed" not in result.output
+
+
 # In theory any option could be set via envvars but let's just test the
 # most likely choices
 def test_envvars_options():
