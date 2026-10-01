@@ -391,6 +391,20 @@ def test_envvar_beancount_file():
     assert result.exit_code == 0
     assert "Mercadito" in result.output
 
+    # explicit FILENAMEs cannot be combined with BEANCOUNT_FILENAME
+    result = runner.invoke(
+        cli,
+        ["Opening", SAMPLE_LEDGER_SMALL],
+        env={"BEANCOUNT_FILENAME": SAMPLE_LEDGER},
+    )
+    assert result.exit_code == 2
+    assert "cannot be combined with BEANCOUNT_FILENAME" in result.output
+    result = runner.invoke(  # empty variable is the same as unset
+        cli, ["Opening", SAMPLE_LEDGER_SMALL], env={"BEANCOUNT_FILENAME": ""}
+    )
+    assert result.exit_code == 0
+    assert "Assets:Checking" in result.output
+
 
 def test_verbose_logging_info(caplog):
     runner = CliRunner()

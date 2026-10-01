@@ -201,7 +201,10 @@ Options:
   The FILENAME can alternatively be specified via the environment variable
   BEANCOUNT_FILENAME. This allows not having to specify it explicitly every
   time bean-grep is run. Only a single FILENAME is allowed to be specified
-  this way.
+  this way. When BEANCOUNT_FILENAME is set, a single argument is always
+  interpreted as PATTERN, and passing more than one argument is an error; to
+  search other files, unset the variable (e.g., "BEANCOUNT_FILENAME= bean-grep
+  PATTERN FILENAME...").
 
   Exit status:
 

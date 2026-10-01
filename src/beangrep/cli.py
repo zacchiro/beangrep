@@ -99,7 +99,10 @@ e.g., BEANGREP_QUIET=1.
 
 The FILENAME can alternatively be specified via the environment variable
 BEANCOUNT_FILENAME. This allows not having to specify it explicitly every time bean-grep
-is run. Only a single FILENAME is allowed to be specified this way.
+is run. Only a single FILENAME is allowed to be specified this way. When
+BEANCOUNT_FILENAME is set, a single argument is always interpreted as PATTERN, and
+passing more than one argument is an error; to search other files, unset the variable
+(e.g., "BEANCOUNT_FILENAME= bean-grep PATTERN FILENAME...").
 
 
 Exit status:
@@ -331,6 +334,11 @@ def cli(
     # beangrep's combination of optional pattern and variadic filenames.
     # So we just roll it ourselves.
     if os.getenv("BEANCOUNT_FILENAME"):
+        if len(args) >= 2:
+            raise click.BadArgumentUsage(
+                "FILENAME arguments cannot be combined with BEANCOUNT_FILENAME;"
+                " unset it to search other files."
+            )
         filenames = [os.getenv("BEANCOUNT_FILENAME")]
         if len(args) == 1:
             pattern = args[0]
