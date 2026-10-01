@@ -274,6 +274,21 @@ def test_errors():
         assert result.exception is None or isinstance(result.exception, SystemExit)
 
 
+def test_amount_currency_regex():
+    runner = CliRunner()
+    result = runner.invoke(cli, ["-A", "76.81 US.", SAMPLE_LEDGER])  # number + regex
+    assert result.exit_code == 0
+    assert "76.81 USD" in result.output
+    result = runner.invoke(cli, ["-A", "vachr", SAMPLE_LEDGER])  # smart case
+    assert result.exit_code == 0
+    assert "VACHR" in result.output
+    assert runner.invoke(cli, ["-A", "EUR", SAMPLE_LEDGER]).exit_code == 1
+    assert (
+        runner.invoke(cli, ["-A", "VACH", SAMPLE_LEDGER]).exit_code == 1
+    )  # full match
+    assert runner.invoke(cli, ["-A", "42 EUR USD", SAMPLE_LEDGER]).exit_code == 2
+
+
 def test_file_errors(tmp_path):
     """Test reporting of files that cannot be loaded, or load with errors."""
     runner = CliRunner()

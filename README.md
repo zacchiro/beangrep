@@ -81,13 +81,22 @@ Options:
   -A, --amount "[OP]AMOUNT [REGEX]"
                                   Only return entries with amounts matching
                                   the given amount predicate. An amount
-                                  predicate start with an optional comparison
+                                  predicate starts with an optional comparison
                                   operator (one of "<", "<=", "=", ">=", ">",
                                   with "=" being the default), followed by a
                                   decimal number (using "." as decimal
                                   separator), followed by an optional currency
-                                  regex. Multiple amount predicates can be
-                                  given to express complex amount ranges.
+                                  regex. A predicate made of a currency regex
+                                  alone (e.g., "USD|EUR") matches amounts in
+                                  any matching currency. Unlike other regexes,
+                                  which match anywhere in a value, currency
+                                  regexes must match the whole currency name:
+                                  "US." matches USD, but "USD" does not match
+                                  IRAUSD (use ".*USD"). Multiple amount
+                                  predicates can be given to express complex
+                                  amount ranges. Only posting units, and
+                                  balance and price amounts, are considered;
+                                  not posting costs or prices.
   -d, --date [OP]DATE             Only return entries with dates matching the
                                   given date predicate. A date predicate start
                                   with an optional comparison operator (one of

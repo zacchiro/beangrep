@@ -17,6 +17,7 @@ import beangrep
 from beangrep import (
     TYPE_SEP,
     AmountPredicate,
+    Caseness,
     Criteria,
     DatePredicate,
     RelOp,
@@ -63,13 +64,40 @@ def test_amount_predicate():
     assert not p("<=42 EUR").match(Amount(Decimal(43), "EUR"))
     assert not p("<=42 EUR").match(Amount(Decimal(42), "USD"))
 
+    # currency regexes: full match, alone or after a number
+    assert p("42 US.").match(Amount(Decimal(42), "USD"))
+    assert p("42 USD|EUR").match(Amount(Decimal(42), "EUR"))
+    assert not p("42 USD").match(Amount(Decimal(42), "IRAUSD"))
+    assert not p("42 US").match(Amount(Decimal(42), "USD"))
+    assert p("42 .*USD").match(Amount(Decimal(42), "IRAUSD"))
+    assert p("42 VAC'H.R").match(Amount(Decimal(42), "VAC'H.R"))
+    assert p("USD").match(Amount(Decimal(1), "USD"))
+    assert p("USD|EUR").match(Amount(Decimal(-1), "EUR"))
+    assert not p("USD").match(Amount(Decimal(1), "EUR"))
+    assert p("[A-Z]{3}") == AmountPredicate(currency=re.compile("[A-Z]{3}"))
+
+    # caseness
+    assert p("42 usd").match(Amount(Decimal(42), "USD"))  # smart: ignore case
+    assert not p("42 Usd").match(Amount(Decimal(42), "USD"))  # smart: match case
+    assert not p("usd", Caseness.MATCH).match(Amount(Decimal(1), "USD"))
+    assert p("Usd", Caseness.IGNORE).match(Amount(Decimal(1), "USD"))
+
 
 def test_amount_predicate_parse_error():
     """Test amount predicate parse errors."""
     with pytest.raises(ValueError):
         assert AmountPredicate.parse("==42")
-    with pytest.raises(ValueError):
-        assert AmountPredicate.parse("=42 EUR USD")
+    for invalid in (
+        "=42 EUR USD",  # whitespace in currency regex
+        "%23 USD",  # currency-only regex with whitespace (operator typo)
+        "",
+        "<",  # operator without number
+        "< USD",
+        "42 (",  # invalid regex
+        "(",
+    ):
+        with pytest.raises(ValueError):
+            AmountPredicate.parse(invalid)
 
 
 def test_date_predicate():
@@ -179,7 +207,15 @@ def test_amount_filtering():
     )
     assert grep_len(l, mk_criteria(amounts=[AmountPredicate.parse("76.81 USD")])) == 1
     assert grep_len(l, mk_criteria(amounts=[AmountPredicate.parse(">3000 USD")])) == 29
+    assert (  # with IRAUSD
+        grep_len(l, mk_criteria(amounts=[AmountPredicate.parse(">3000 .*USD")])) == 32
+    )
+    assert grep_len(l, mk_criteria(amounts=[AmountPredicate.parse("VACHR")])) > 0
+    assert grep_len(l, mk_criteria(amounts=[AmountPredicate.parse("EUR")])) == 0
     assert grep_len(l, mk_criteria(amounts=[AmountPredicate.parse("<1 USD")])) == 1177
+    assert (  # with IRAUSD
+        grep_len(l, mk_criteria(amounts=[AmountPredicate.parse("<1 .*USD")])) == 1183
+    )
     assert (
         grep_len(
             l,

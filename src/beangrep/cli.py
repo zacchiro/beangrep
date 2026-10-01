@@ -129,10 +129,14 @@ found.""",
     metavar='"[OP]AMOUNT [REGEX]"',
     multiple=True,
     help="""Only return entries with amounts matching the given amount predicate. An
-amount predicate start with an optional comparison operator (one of "<", "<=", "=",
+amount predicate starts with an optional comparison operator (one of "<", "<=", "=",
 ">=", ">", with "=" being the default), followed by a decimal number (using "." as
-decimal separator), followed by an optional currency regex. Multiple amount predicates
-can be given to express complex amount ranges.""",
+decimal separator), followed by an optional currency regex. A predicate made of a
+currency regex alone (e.g., "USD|EUR") matches amounts in any matching currency. Unlike
+other regexes, which match anywhere in a value, currency regexes must match the whole
+currency name: "US." matches USD, but "USD" does not match IRAUSD (use ".*USD"). Multiple
+amount predicates can be given to express complex amount ranges. Only posting units, and
+balance and price amounts, are considered; not posting costs or prices.""",
 )
 @click.option(
     "--date",

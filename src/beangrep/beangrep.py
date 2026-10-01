@@ -107,9 +107,25 @@ class RelOp(Enum):
         return cast(Self, result)
 
 
+def compile_regex(ignore_case: bool, s: str) -> re.Pattern:
+    """Compile a regex, ignoring case or not.
+
+    Raise ValueError if the regex is invalid.
+
+    """
+    re_flags = 0
+    if ignore_case:
+        re_flags = re.IGNORECASE
+
+    try:
+        return re.compile(s, flags=re_flags)
+    except re.error as e:
+        raise ValueError(f'invalid regular expression "{s}": {e}') from e
+
+
 @dataclass
 class AmountPredicate:
-    """Predicate on amounts, filtering on number/currency."""
+    """Predicate on amounts, filtering on number and/or currency."""
 
     comp: RelOp = RelOp.EQ
     number: Optional[Decimal] = None
@@ -121,33 +137,53 @@ class AmountPredicate:
         if is_match and self.number is not None:
             is_match = is_match and self.comp.eval(amount.number, self.number)
         if is_match and self.currency is not None:
-            is_match = is_match and self.currency == amount.currency
+            # full match: currency names are atomic, so a regex like "USD" should
+            # not match "IRAUSD"
+            is_match = is_match and bool(self.currency.fullmatch(amount.currency))
 
         return is_match
 
-    # regular expression used to parse amount predicates
+    # regular expressions used to parse amount predicates: predicates starting like a
+    # number (or a comparison operator) are "[OP]NUMBER [REGEX]", others are "REGEX";
+    # currency regexes cannot contain whitespace, as currency names do not
+    NUMBER_START_RE = re.compile(r"^[<=>\-\d]")
     SYNTAX_RE = re.compile(
         r"^(?P<comp><|<=|=|>|>=)?"
         r"(?P<number>-?\d+(\.\d+)?)"
-        r"(\s+(?P<currency>[A-Z][A-Z\._\-]*))?$"
+        r"(\s+(?P<currency>\S+))?$"
     )
 
     @classmethod
-    def parse(cls, s: str) -> Self:
-        """Parse an amount predicate from string."""
+    def parse(cls, s: str, caseness: Caseness = Caseness.SMART) -> Self:
+        """Parse an amount predicate from string.
+
+        The currency regex, if any, is compiled according to caseness.
+
+        """
+        if not cls.NUMBER_START_RE.match(s):  # currency regex only
+            if not s or any(c.isspace() for c in s):
+                raise ValueError(f'invalid amount predicate "{s}"')
+            return cls(currency=compile_regex(caseness.ignore_case(s), s))
 
         m = cls.SYNTAX_RE.match(s)
         if not m:
             raise ValueError(f'invalid amount predicate "{s}"')
 
         # remove None matches to avoid overriding AmountPredicate defaults below
-        matches = dict((k, v) for (k, v) in m.groupdict().items() if v is not None)
+        matches: dict = dict(
+            (k, v) for (k, v) in m.groupdict().items() if v is not None
+        )
         if "comp" in matches:
             matches["comp"] = RelOp.parse(matches["comp"])
         if "number" in matches:
             matches["number"] = Decimal(matches["number"])
+        if "currency" in matches:
+            currency = matches["currency"]
+            matches["currency"] = compile_regex(
+                caseness.ignore_case(currency), currency
+            )
 
-        return cls(**matches)  # type: ignore  # too dynamic to type properly
+        return cls(**matches)
 
 
 @dataclass
@@ -281,17 +317,7 @@ class Criteria:
     tags: list[re.Pattern] = field(default_factory=list)
     types: frozenset[type] = TYPES_DEFAULT
 
-    @staticmethod
-    def _re_compile(ignore_case: bool, s: str) -> re.Pattern:
-        """Compile a regex, ignoring case or not."""
-        re_flags = 0
-        if ignore_case:
-            re_flags = re.IGNORECASE
-
-        try:
-            return re.compile(s, flags=re_flags)
-        except re.error as e:
-            raise ValueError(f'invalid regular expression "{s}": {e}') from e
+    _re_compile = staticmethod(compile_regex)
 
     @classmethod
     def guess(
@@ -368,7 +394,7 @@ class Criteria:
                 cls._re_compile(caseness.ignore_case(s), s) for s in accounts
             )
         if amounts is not None:
-            criteria.amounts.extend(AmountPredicate.parse(s) for s in amounts)
+            criteria.amounts.extend(AmountPredicate.parse(s, caseness) for s in amounts)
         if dates is not None:
             criteria.dates.extend(DatePredicate.parse(s) for s in dates)
         if flags is not None:
