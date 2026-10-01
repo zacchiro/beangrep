@@ -320,6 +320,38 @@ def test_tag_filtering():
     assert grep_len(l, mk_criteria(tags=[re.compile("asfgkjashfg")])) == 0
 
 
+POSTING_TAGS_LEDGER = """
+2024-01-01 open Assets:Cash
+2024-01-01 open Expenses:Food
+
+2024-01-02 * "No posting tags"
+  Assets:Cash  -1 EUR
+  Expenses:Food
+
+2024-01-03 * "Non-string posting tag"
+  Assets:Cash  -2 EUR
+    tags: 5
+  Expenses:Food
+
+2024-01-04 * "String posting tags"
+  Assets:Cash  -3 EUR
+    tags: "foo, ,bar,"
+  Expenses:Food
+"""
+
+
+def test_posting_tags():
+    """Test posting tags: missing, empty, and non-string values."""
+    (l, errors, _) = beancount.loader.load_string(POSTING_TAGS_LEDGER)  # noqa:E741
+    assert not errors
+    txns = [e for e in l if isinstance(e, data.Transaction)]
+    assert [beangrep.get_tags(e) for e in txns] == [set(), {"5"}, {"foo", "bar"}]
+
+    assert grep_len(l, Criteria(tags=[re.compile("^$")])) == 0
+    assert grep_len(l, Criteria(tags=[re.compile("^5$")])) == 1
+    assert grep_len(l, Criteria(somewheres=[re.compile("Food")])) == 3
+
+
 def test_type_filtering():
     l = load_sample_ledger()  # noqa:E741
     assert grep_len(l, mk_criteria(types=data.ALL_DIRECTIVES)) == DIRECTIVES_IN_SAMPLE

@@ -535,12 +535,12 @@ def get_tags(entry: data.Directive, posting_tags_meta=POSTING_TAGS_META) -> set[
 
     if isinstance(entry, data.Transaction) and posting_tags_meta is not None:
         for posting in getattr(entry, "postings", []):
-            tags.extend(
-                tag.strip()
-                for tag in posting.meta.get(posting_tags_meta, "").split(
-                    POSTING_TAGS_SEP
-                )
-            )
+            value = (posting.meta or {}).get(posting_tags_meta)
+            if value is None:
+                continue
+            for tag in str(value).split(POSTING_TAGS_SEP):
+                if tag := tag.strip():
+                    tags.append(tag)
 
     return set(tags)
 
