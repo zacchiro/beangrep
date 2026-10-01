@@ -426,6 +426,8 @@ def cli(
                 break
             else:
                 printer.print_entry(entry)
+        if quiet and match_found:  # exit immediately, skipping remaining files
+            break
 
     if error_found and not (quiet and match_found):
         exit_status = 2

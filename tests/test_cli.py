@@ -310,6 +310,10 @@ def test_file_errors(tmp_path):
         runner.invoke(cli, ["-q", "Opening", missing, SAMPLE_LEDGER_SMALL]).exit_code
         == 0
     )
+    # -q: exit at the first match, without loading the remaining files
+    result = runner.invoke(cli, ["-q", "Opening", SAMPLE_LEDGER_SMALL, missing])
+    assert result.exit_code == 0
+    assert "does not exist" not in result.output
     assert (
         runner.invoke(cli, ["-q", "nomatch", missing, SAMPLE_LEDGER_SMALL]).exit_code
         == 2
