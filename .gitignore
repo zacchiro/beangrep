@@ -1,8 +1,10 @@
 *.egg-info/
+*.picklecache
 .coverage
 .mypy_cache
 .pytest_cache
 __pycache__
+build/
 dist/
 htmlcov/
 src/beangrep/data/bean-grep.1
