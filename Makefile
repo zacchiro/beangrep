@@ -33,7 +33,7 @@ upload:
 	$(MAKE) distclean
 	$(MAKE) release
 	$(TWINE) upload --repository pypi $(DIST_DIR)/*
-test-upload: release
+test-upload:
 	$(MAKE) distclean
 	$(MAKE) release
 	$(TWINE) upload --repository testpypi $(DIST_DIR)/*
