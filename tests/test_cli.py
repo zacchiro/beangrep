@@ -203,7 +203,7 @@ def test_case_matching():
 
 
 def test_conjunction():
-    """Test logical conjunction of mutiple criteria."""
+    """Test logical conjunction of multiple criteria."""
     runner = CliRunner()
     # Payee + date:
     assert (

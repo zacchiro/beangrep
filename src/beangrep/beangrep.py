@@ -37,7 +37,7 @@ class Caseness(Enum):
     def from_cli(
         cls, case_sensitive: bool, ignore_case: bool, smart_case: bool
     ) -> Self:
-        """Create a CaseMatching enum from CLI arguments, applying overrides."""
+        """Create a Caseness value from CLI arguments, applying overrides."""
         if case_sensitive:
             result = cls.MATCH
         elif ignore_case:
@@ -47,7 +47,7 @@ class Caseness(Enum):
         return cast(Self, result)
 
     def ignore_case(self, s: str) -> bool:
-        """Check if caseness should be ignored for a given string."""
+        """Check if case should be ignored for a given string."""
         result = False
         match self:
             case self.MATCH:
@@ -69,7 +69,7 @@ class RelOp(Enum):
     LT = 2  # <
     GT = 3  # >
     LEQ = 4  # <=
-    GEQ = 5  # <=
+    GEQ = 5  # >=
 
     def eval(self, lhs, rhs) -> bool:
         """Evaluate the relational operator on two values (left-hand side and right-hand
@@ -155,7 +155,7 @@ class AmountPredicate:
 
     @classmethod
     def parse(cls, s: str, caseness: Caseness = Caseness.SMART) -> Self:
-        """Parse an amount predicate from string.
+        """Parse an amount predicate from a string.
 
         The currency regex, if any, is compiled according to caseness.
 
@@ -282,7 +282,7 @@ class DatePredicate:
 
     @classmethod
     def parse(cls, s: str) -> Self:
-        """Parse a date predicate from string."""
+        """Parse a date predicate from a string."""
         m = cls.SYNTAX_RE.match(s)
         if not m:
             raise ValueError(f'invalid date predicate "{s}"')
@@ -448,13 +448,13 @@ class Criteria:
 
 
 def get_accounts(entry: data.Directive) -> set[str]:
-    """Extract account names referenced from a Beancount entry.
+    """Extract account names referenced by a Beancount entry.
 
-    - For transactions, return the name of all accounts in postings.
+    - For transactions, return the names of all accounts in postings.
 
     - For pad entries, return the names of both debit and credit accounts.
 
-    - For entries like open, close, etc. return the singleton name of the referenced
+    - For entries like open, close, etc., return the singleton name of the referenced
       account.
 
     """
@@ -569,8 +569,8 @@ def get_tags(entry: data.Directive, posting_tags_meta=POSTING_TAGS_META) -> set[
     - Tags applied globally to the entry.
 
     - "Fake" tags applied to transaction postings (as Beancount syntax currently does
-      not support tags on postings) using the value associated to the metadata key
-      specified with posting_tags_meta. To disable looking for these tags pass
+      not support tags on postings) using the value associated with the metadata key
+      specified with posting_tags_meta. To disable looking for these tags, pass
       posting_tags_meta=None.
 
     """
@@ -680,13 +680,13 @@ def date_matches(entry: data.Directive, criteria: Iterable[DatePredicate]) -> bo
     # predicates. Note: should return False for transactions with no dates.
     return bool(  # there is at least one date...
         dates := get_dates(entry)
-    ) and any(  # ... that matches all amount predicates
+    ) and any(  # ... that matches all date predicates
         all(date_pred.match(a) for date_pred in criteria) for a in dates
     )
 
 
 def flag_matches(entry: data.Directive, criteria: Iterable[re.Pattern]) -> bool:
-    """Check if a Beancount entry matches flags criteria.
+    """Check if a Beancount entry matches flag criteria.
 
     Note: always return False for non-transaction entries.
 
@@ -695,7 +695,7 @@ def flag_matches(entry: data.Directive, criteria: Iterable[re.Pattern]) -> bool:
 
 
 def link_matches(entry: data.Directive, criteria: Iterable[re.Pattern]) -> bool:
-    """Check if a Beancount entry matches links criteria."""
+    """Check if a Beancount entry matches link criteria."""
     return all(any(pat.search(link) for link in get_links(entry)) for pat in criteria)
 
 
@@ -772,7 +772,7 @@ def entry_matches(
     posting_tags_meta=POSTING_TAGS_META,
     skip_internals=SKIP_INTERNALS,
 ) -> bool:
-    """Check if a Beancount entry matches stated criteria."""
+    """Check if a Beancount entry matches the given criteria."""
 
     predicates = []
     if criteria.accounts:

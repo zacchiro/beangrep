@@ -26,7 +26,7 @@ $ pip install beangrep
 Successfully installed beancount-2.3.6 beangrep-...
 
 $ bean-grep --help
-Usage: bean-grep [OPTIONS] FILENAME
+Usage: bean-grep [OPTIONS] [PATTERN] FILENAME...
 [...]
 ```
 
@@ -44,7 +44,7 @@ $ pip install -e .
 Successfully installed beancount-2.3.6 beangrep-...
 
 $ bean-grep --help
-Usage: bean-grep [OPTIONS] FILENAME
+Usage: bean-grep [OPTIONS] [PATTERN] FILENAME...
 [...]
 ```
 
@@ -57,19 +57,19 @@ The CLI says it all when invoked as `bean-grep --help`:
 ```
 Usage: bean-grep [OPTIONS] [PATTERN] FILENAME...
 
-  Search for entries matching given criteria in Beancount journals. Pretty
-  print matching entries to standard output.
+  Search for entries matching the given criteria in Beancount journals.
+  Pretty-print matching entries to standard output.
 
-  Search criteria can be specified with the options below and/or providing an
-  explicit "smart" PATTERN. If given, PATTERN is interpreted as described
+  Search criteria can be specified with the options below and/or by providing
+  an explicit "smart" PATTERN. If given, PATTERN is interpreted as described
   below under "Patterns". If not given, search criteria are defined by
   explicit options.
 
-  Multiple options, options given mutiple times, and PATTERN(s) are logically
+  Multiple options, options given multiple times, and PATTERN(s) are logically
   joined (AND-ed) together.
 
   The granularity of matching (and results) is that of individual entries,
-  e.g., full transactions, balances, notes, etc. By default only transactions
+  e.g., full transactions, balances, notes, etc. By default, only transactions
   are returned; use the --type/-T option to override.
 
   To read from standard input, pass "-" as FILENAME, but beware that it
@@ -77,7 +77,7 @@ Usage: bean-grep [OPTIONS] [PATTERN] FILENAME...
 
 Options:
   -a, --account REGEX             Only return entries referencing accounts
-                                  with names matching given regex.
+                                  with names matching the given regex.
   -A, --amount "[OP]AMOUNT [REGEX]"
                                   Only return entries with amounts matching
                                   the given amount predicate. An amount
@@ -94,61 +94,61 @@ Options:
                                   "US." matches USD, but "USD" does not match
                                   IRAUSD (use ".*USD"). Multiple amount
                                   predicates can be given to express complex
-                                  amount ranges. Only posting units, and
-                                  balance and price amounts, are considered;
+                                  amount ranges. Only posting units and
+                                  balance and price amounts are considered,
                                   not posting costs or prices.
   -d, --date [OP]DATE             Only return entries with dates matching the
-                                  given date predicate. A date predicate start
-                                  with an optional comparison operator (one of
-                                  "<", "<=", "=", ">=", ">", with "=" being
-                                  the default), and is followed by a date in
-                                  the form YYYY-[MM[-DD]]. Multiple date
+                                  given date predicate. A date predicate
+                                  starts with an optional comparison operator
+                                  (one of "<", "<=", "=", ">=", ">", with "="
+                                  being the default), followed by a date in
+                                  the form YYYY[-MM[-DD]]. Multiple date
                                   predicates can be given to express complex
                                   date ranges.
   -f, --flag REGEX                Only return transactions with at least one
                                   flag matching the given regex (usually a
-                                  single character, properly escaped).  Both
+                                  single character, properly escaped). Both
                                   transaction and posting flags are used for
                                   matching.
   -l, --link REGEX                Only return entries with at least one link
-                                  matching given regex.
+                                  matching the given regex.
   -m, --meta, --metadata REGEX[:REGEX]
                                   Only return entries with at least one
-                                  metadata key/value pair matching given
-                                  pattern. A pattern is a pair of regexs
-                                  separated by ":", the former matching on
-                                  metadata key, the latter on metadata value.
+                                  metadata key/value pair matching the given
+                                  pattern. A pattern is a pair of regexes
+                                  separated by ":", the former matching the
+                                  metadata key, the latter the metadata value.
                                   The second regex is optional and defaults to
                                   ".*".
   -n, --narration REGEX           Only return entries whose narrations match
+                                  the given regex.
+  -p, --payee REGEX               Only return entries whose payees match the
                                   given regex.
-  -p, --payee REGEX               Only return entries whose payees match given
-                                  regex.
   -s, --somewhere, --anywhere REGEX
-                                  Only return entries with a value in them,
-                                  anywhere, matching given regex.
+                                  Only return entries with a value anywhere in
+                                  them matching the given regex.
   -t, --tag REGEX                 Only return entries with at least one tag
-                                  matching given regex. The tag can be located
-                                  anywhere.
-  -T, --type TYPE(S)              Only return entries of certain types.  Types
+                                  matching the given regex. The tag can be
+                                  located anywhere.
+  -T, --type TYPE(S)              Only return entries of certain types. Types
                                   are specified as a ","-separated list of
-                                  type names; type names are: open, close,
-                                  commodity, pad, balance, transaction, note,
-                                  event, query, price, document, custom. The
-                                  special value "all" means: all directive
+                                  type names; valid type names are: open,
+                                  close, commodity, pad, balance, transaction,
+                                  note, event, query, price, document, custom.
+                                  The special value "all" means all directive
                                   types. [default: transaction]
-  --case-sensitive                Search case sensitively. Overrides:
+  --case-sensitive                Search case-sensitively. Overrides
                                   -i/--ignore-case and -S/--smart-case.
-  -i, --ignore-case               Search case insensitively. Overrides
+  -i, --ignore-case               Search case-insensitively. Overrides
                                   -S/--smart-case; overridden by --case-
                                   sensitive.
-  -S, --smart-case                Search case insensitively if all criteria
-                                  are lowercase, sensitively otherwise.
-                                  Overridden by: --case-sensitive and
+  -S, --smart-case                Search case-insensitively if all criteria
+                                  are lowercase, case-sensitively otherwise.
+                                  Overridden by --case-sensitive and
                                   -i/--ignore-case.  [default: True]
   --posting-tags-meta TEXT        Metadata key used to attach tags to
                                   transaction postings.  [default: tags]
-  -q, --quiet / --no-quiet        Quiet, do not write anything to standard
+  -q, --quiet / --no-quiet        Quiet: do not write anything to standard
                                   output. Exit successfully immediately if any
                                   match is found.  [default: no-quiet]
   --skip-internals / --no-skip-internals
@@ -157,23 +157,23 @@ Options:
                                   automatic metadata: filename, lineno.
                                   [default: skip-internals]
   -v, --invert-match              Invert the sense of matching: return entries
-                                  that do *not* match given criteria. This
+                                  that do *not* match the given criteria. This
                                   clears the default "--type transaction"
-                                  criteria, to avoid only returning non-
+                                  criterion, to avoid only returning non-
                                   transaction entries by default.
-  --verbose                       Increase logging verbosity. Default
-                                  verbosity is at WARNING level; passing this
-                                  option once will increase it to INFO, twice
-                                  or more to DEBUG.
+  --verbose                       Increase logging verbosity. The default
+                                  verbosity is WARNING; passing this option
+                                  once increases it to INFO, twice or more to
+                                  DEBUG.
   -V, --version                   Show the version and exit.
   --help                          Show this message and exit.
 
   Patterns:
 
-  When given the "smart" PATTERN is interpreted according to the following
-  heuristics, tried in order, first match wins:
+  When given, the "smart" PATTERN is interpreted according to the following
+  heuristics, tried in order (the first match wins):
 
-  - if it is in the form "YYYY-MM-DD" -> then it is interpreted as --date
+  - if it is in the form "YYYY-MM-DD" -> --date
 
   - "#tag" -> --tag, if tag is made only of characters allowed in Beancount
   tags (letters, digits, "-", "_", "/", "."); use --tag for arbitrary tag
@@ -189,8 +189,8 @@ Options:
   e.g., "assets:cash" is not an account search, but a metadata one
 
   - "key:value" -> --metadata, if key is a valid Beancount metadata key (a
-  lowercase letter, followed by letters, digits, "-", "_"); value is any regex
-  without whitespace and not starting with "//" (so that, e.g., URLs are
+  lowercase letter, followed by letters, digits, "-", or "_"); value is any
+  regex without whitespace and not starting with "//" (so that, e.g., URLs are
   --somewhere searches), possibly empty ("key:") to match any value; use
   --metadata for values containing spaces
 
@@ -200,24 +200,24 @@ Options:
 
   All options can be set via environment variables, which is most useful if
   you want to override the defaults. Each environment variable consists of the
-  prefix BEANGREP_ followed by the option name in uppercase.  e.g.,
+  prefix BEANGREP_ followed by the option name in uppercase, e.g.,
   BEANGREP_VERBOSE, BEANGREP_CASE_SENSITIVE, BEANGREP_QUIET,
   BEANGREP_NO_SKIP_INTERNALS, etc. Boolean options are enabled/disabled by
-  setting the corresponding variables to 1/0 respectively, e.g.,
+  setting the corresponding variables to 1/0, respectively, e.g.,
   BEANGREP_QUIET=1.
 
   The FILENAME can alternatively be specified via the environment variable
-  BEANCOUNT_FILENAME. This allows not having to specify it explicitly every
-  time bean-grep is run. Only a single FILENAME is allowed to be specified
-  this way. When BEANCOUNT_FILENAME is set, a single argument is always
-  interpreted as PATTERN, and passing more than one argument is an error; to
-  search other files, unset the variable (e.g., "BEANCOUNT_FILENAME= bean-grep
-  PATTERN FILENAME...").
+  BEANCOUNT_FILENAME. This avoids having to specify it explicitly every time
+  bean-grep is run. Only a single FILENAME can be specified this way. When
+  BEANCOUNT_FILENAME is set, a single argument is always interpreted as
+  PATTERN, and passing more than one argument is an error; to search other
+  files, unset the variable (e.g., "BEANCOUNT_FILENAME= bean-grep PATTERN
+  FILENAME...").
 
   Exit status:
 
-  Exit status is 0 (success) if a match is found, 1 if no match is found, 2 if
-  an error occurred. An error that occurs on some files does not stop
+  The exit status is 0 (success) if a match is found, 1 if no match is found,
+  and 2 if an error occurred. An error that occurs on some files does not stop
   processing the remaining ones, but still results in exit status 2, unless
   --quiet is used and a match is found.
 ```
@@ -245,7 +245,7 @@ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 A copy of the GNU General Public License is [distributed with Beangrep][gpl2-here]
-as well as from the [official license page][gpl2-home].
+and is also available from the [official license page][gpl2-home].
 
 [gpl2-here]: https://github.com/zacchiro/beangrep/blob/main/LICENSE-GPL-2.0-or-later
 [gpl2-home]: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html

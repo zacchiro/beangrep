@@ -28,7 +28,7 @@ from beangrep import (
 DATA_DIR = Path(__file__).parent.resolve() / "data"
 SAMPLE_LEDGER = str(DATA_DIR / "example.beancount")
 SAMPLE_LEDGER_SMALL = str(DATA_DIR / "small.beancount")
-DIRECTIVES_IN_SAMPLE = 2247  # `bean-quey example.beancount` shows this
+DIRECTIVES_IN_SAMPLE = 2247  # `bean-query example.beancount` shows this
 
 
 def test_relop():
@@ -119,7 +119,7 @@ def test_date_predicate():
 
 
 def test_date_predicate_parse_error():
-    """Test date predicate prasing errors."""
+    """Test date predicate parsing errors."""
     with pytest.raises(ValueError):
         assert DatePredicate.parse("==2014")
     with pytest.raises(ValueError):

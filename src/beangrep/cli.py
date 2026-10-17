@@ -51,28 +51,28 @@ def format_error(err, loaded_name: str, display_name: str) -> str:
 
 @click.command(
     context_settings={"auto_envvar_prefix": "BEANGREP"},
-    help="""Search for entries matching given criteria in Beancount journals. Pretty
-print matching entries to standard output.
+    help="""Search for entries matching the given criteria in Beancount journals.
+Pretty-print matching entries to standard output.
 
-Search criteria can be specified with the options below and/or providing an explicit
+Search criteria can be specified with the options below and/or by providing an explicit
 "smart" PATTERN. If given, PATTERN is interpreted as described below under "Patterns".
 If not given, search criteria are defined by explicit options.
 
-Multiple options, options given mutiple times, and PATTERN(s) are logically joined
+Multiple options, options given multiple times, and PATTERN(s) are logically joined
 (AND-ed) together.
 
 The granularity of matching (and results) is that of individual entries, e.g., full
-transactions, balances, notes, etc. By default only transactions are returned; use the
+transactions, balances, notes, etc. By default, only transactions are returned; use the
 --type/-T option to override.
 
 To read from standard input, pass "-" as FILENAME, but beware that it implies on-disk
 buffering of stdin.""",
     epilog="""Patterns:
 
-When given the "smart" PATTERN is interpreted according to the following heuristics,
-tried in order, first match wins:
+When given, the "smart" PATTERN is interpreted according to the following heuristics,
+tried in order (the first match wins):
 
-- if it is in the form "YYYY-MM-DD" -> then it is interpreted as --date
+- if it is in the form "YYYY-MM-DD" -> --date
 
 - "#tag" -> --tag, if tag is made only of characters allowed in Beancount tags
 (letters, digits, "-", "_", "/", "."); use --tag for arbitrary tag regexes
@@ -87,7 +87,7 @@ regexes
 not an account search, but a metadata one
 
 - "key:value" -> --metadata, if key is a valid Beancount metadata key (a lowercase
-letter, followed by letters, digits, "-", "_"); value is any regex without whitespace
+letter, followed by letters, digits, "-", or "_"); value is any regex without whitespace
 and not starting with "//" (so that, e.g., URLs are --somewhere searches), possibly
 empty ("key:") to match any value; use --metadata for values containing spaces
 
@@ -98,25 +98,25 @@ Environment:
 
 All options can be set via environment variables, which is most useful if you want to
 override the defaults. Each environment variable consists of the prefix BEANGREP_
-followed by the option name in uppercase.  e.g., BEANGREP_VERBOSE,
+followed by the option name in uppercase, e.g., BEANGREP_VERBOSE,
 BEANGREP_CASE_SENSITIVE, BEANGREP_QUIET, BEANGREP_NO_SKIP_INTERNALS, etc. Boolean
-options are enabled/disabled by setting the corresponding variables to 1/0 respectively,
-e.g., BEANGREP_QUIET=1.
+options are enabled/disabled by setting the corresponding variables to 1/0,
+respectively, e.g., BEANGREP_QUIET=1.
 
 The FILENAME can alternatively be specified via the environment variable
-BEANCOUNT_FILENAME. This allows not having to specify it explicitly every time bean-grep
-is run. Only a single FILENAME is allowed to be specified this way. When
-BEANCOUNT_FILENAME is set, a single argument is always interpreted as PATTERN, and
-passing more than one argument is an error; to search other files, unset the variable
+BEANCOUNT_FILENAME. This avoids having to specify it explicitly every time bean-grep is
+run. Only a single FILENAME can be specified this way. When BEANCOUNT_FILENAME is set, a
+single argument is always interpreted as PATTERN, and passing more than one argument is
+an error; to search other files, unset the variable
 (e.g., "BEANCOUNT_FILENAME= bean-grep PATTERN FILENAME...").
 
 
 Exit status:
 
-Exit status is 0 (success) if a match is found, 1 if no match is found, 2 if an error
-occurred. An error that occurs on some files does not stop processing the remaining
-ones, but still results in exit status 2, unless --quiet is used and a match is
-found.""",
+The exit status is 0 (success) if a match is found, 1 if no match is found, and 2 if an
+error occurred. An error that occurs on some files does not stop processing the
+remaining ones, but still results in exit status 2, unless --quiet is used and a match
+is found.""",
 )
 @click.argument(
     "args",
@@ -129,7 +129,8 @@ found.""",
     "accounts",
     metavar="REGEX",
     multiple=True,
-    help="Only return entries referencing accounts with names matching given regex.",
+    help="""Only return entries referencing accounts with names matching the given
+regex.""",
 )
 @click.option(
     "--amount",
@@ -144,8 +145,8 @@ decimal separator), followed by an optional currency regex. A predicate made of 
 currency regex alone (e.g., "USD|EUR") matches amounts in any matching currency. Unlike
 other regexes, which match anywhere in a value, currency regexes must match the whole
 currency name: "US." matches USD, but "USD" does not match IRAUSD (use ".*USD"). Multiple
-amount predicates can be given to express complex amount ranges. Only posting units, and
-balance and price amounts, are considered; not posting costs or prices.""",
+amount predicates can be given to express complex amount ranges. Only posting units and
+balance and price amounts are considered, not posting costs or prices.""",
 )
 @click.option(
     "--date",
@@ -154,8 +155,8 @@ balance and price amounts, are considered; not posting costs or prices.""",
     metavar="[OP]DATE",
     multiple=True,
     help="""Only return entries with dates matching the given date predicate. A date
-predicate start with an optional comparison operator (one of "<", "<=", "=", ">=", ">",
-with "=" being the default), and is followed by a date in the form YYYY-[MM[-DD]].
+predicate starts with an optional comparison operator (one of "<", "<=", "=", ">=", ">",
+with "=" being the default), followed by a date in the form YYYY[-MM[-DD]].
 Multiple date predicates can be given to express complex date ranges.""",
 )
 @click.option(
@@ -165,7 +166,7 @@ Multiple date predicates can be given to express complex date ranges.""",
     metavar="REGEX",
     multiple=True,
     help="""Only return transactions with at least one flag matching the given regex
-    (usually a single character, properly escaped).  Both transaction and posting flags
+    (usually a single character, properly escaped). Both transaction and posting flags
     are used for matching.""",
 )
 @click.option(
@@ -174,7 +175,7 @@ Multiple date predicates can be given to express complex date ranges.""",
     "links",
     metavar="REGEX",
     multiple=True,
-    help="Only return entries with at least one link matching given regex.",
+    help="Only return entries with at least one link matching the given regex.",
 )
 @click.option(
     "--meta",
@@ -184,9 +185,9 @@ Multiple date predicates can be given to express complex date ranges.""",
     metavar="REGEX[:REGEX]",
     multiple=True,
     help=f"""Only return entries with at least one metadata key/value pair matching
-given pattern. A pattern is a pair of regexs separated by ":", the former matching on
-metadata key, the latter on metadata value. The second regex is optional and defaults to
-"{META_VAL_RE}".""",
+the given pattern. A pattern is a pair of regexes separated by ":", the former matching
+the metadata key, the latter the metadata value. The second regex is optional and
+defaults to "{META_VAL_RE}".""",
 )
 @click.option(
     "--narration",
@@ -194,7 +195,7 @@ metadata key, the latter on metadata value. The second regex is optional and def
     "narrations",
     metavar="REGEX",
     multiple=True,
-    help="Only return entries whose narrations match given regex.",
+    help="Only return entries whose narrations match the given regex.",
 )
 @click.option(
     "--payee",
@@ -202,7 +203,7 @@ metadata key, the latter on metadata value. The second regex is optional and def
     "payees",
     multiple=True,
     metavar="REGEX",
-    help="Only return entries whose payees match given regex.",
+    help="Only return entries whose payees match the given regex.",
 )
 @click.option(
     "--somewhere",
@@ -211,7 +212,7 @@ metadata key, the latter on metadata value. The second regex is optional and def
     "somewheres",
     metavar="REGEX",
     multiple=True,
-    help="Only return entries with a value in them, anywhere, matching given regex.",
+    help="Only return entries with a value anywhere in them matching the given regex.",
 )
 @click.option(
     "--tag",
@@ -219,25 +220,25 @@ metadata key, the latter on metadata value. The second regex is optional and def
     "tags",
     metavar="REGEX",
     multiple=True,
-    help="""Only return entries with at least one tag matching given regex. The tag can
-be located anywhere.""",
+    help="""Only return entries with at least one tag matching the given regex. The tag
+can be located anywhere.""",
 )
 @click.option(
     "--type",
     "-T",
     "types",
     metavar="TYPE(S)",
-    help=f"""Only return entries of certain types.  Types are specified as a
-"{TYPE_SEP}"-separated list of type names; type names are: open, close, commodity, pad,
-balance, transaction, note, event, query, price, document, custom. The special value
-"all" means: all directive types. [default: transaction]""",
+    help=f"""Only return entries of certain types. Types are specified as a
+"{TYPE_SEP}"-separated list of type names; valid type names are: open, close, commodity,
+pad, balance, transaction, note, event, query, price, document, custom. The special
+value "all" means all directive types. [default: transaction]""",
 )
 @click.option(
     "--case-sensitive",
     "case_sensitive",
     is_flag=True,
     default=False,
-    help="Search case sensitively. Overrides: -i/--ignore-case and -S/--smart-case.",
+    help="Search case-sensitively. Overrides -i/--ignore-case and -S/--smart-case.",
 )
 @click.option(
     "--ignore-case",
@@ -245,7 +246,7 @@ balance, transaction, note, event, query, price, document, custom. The special v
     "ignore_case",
     is_flag=True,
     default=False,
-    help="""Search case insensitively. Overrides -S/--smart-case; overridden by
+    help="""Search case-insensitively. Overrides -S/--smart-case; overridden by
 --case-sensitive.""",
 )
 @click.option(
@@ -255,8 +256,8 @@ balance, transaction, note, event, query, price, document, custom. The special v
     is_flag=True,
     default=True,
     show_default=True,
-    help="""Search case insensitively if all criteria are lowercase, sensitively
-otherwise. Overridden by: --case-sensitive and -i/--ignore-case.""",
+    help="""Search case-insensitively if all criteria are lowercase, case-sensitively
+otherwise. Overridden by --case-sensitive and -i/--ignore-case.""",
 )
 @click.option(
     "--posting-tags-meta",
@@ -270,7 +271,7 @@ otherwise. Overridden by: --case-sensitive and -i/--ignore-case.""",
     "quiet",
     default=False,
     show_default=True,
-    help="""Quiet, do not write anything to standard output. Exit successfully
+    help="""Quiet: do not write anything to standard output. Exit successfully
 immediately if any match is found.""",
 )
 @click.option(
@@ -288,15 +289,15 @@ includes the automatic metadata: {", ".join(sorted(INTERNALS_META))}.""",
     is_flag=True,
     default=False,
     show_default=True,
-    help="""Invert the sense of matching: return entries that do *not* match given
-criteria. This clears the default "--type transaction" criteria, to avoid only returning
-non-transaction entries by default.""",
+    help="""Invert the sense of matching: return entries that do *not* match the
+given criteria. This clears the default "--type transaction" criterion, to avoid only
+returning non-transaction entries by default.""",
 )
 @click.option(
     "--verbose",
     count=True,
-    help="""Increase logging verbosity. Default verbosity is at WARNING level; passing
-this option once will increase it to INFO, twice or more to DEBUG.""",
+    help="""Increase logging verbosity. The default verbosity is WARNING; passing this
+option once increases it to INFO, twice or more to DEBUG.""",
 )
 @click.version_option(None, "--version", "-V")
 @click.pass_context
@@ -335,7 +336,7 @@ def cli(
     logging.basicConfig(level=log_level)
 
     (pattern, filenames) = (None, [])
-    # click has has support for setting arguments via environment
+    # click has support for setting arguments via environment
     # variables but I can't figure out how to make it work with
     # beangrep's combination of optional pattern and variadic filenames.
     # So we just roll it ourselves.
@@ -350,14 +351,14 @@ def cli(
             pattern = args[0]
     else:
         if len(args) == 0:
-            raise click.BadArgumentUsage("Must specify at least one beancount file.")
+            raise click.BadArgumentUsage("Must specify at least one Beancount file.")
         elif len(args) == 1:
             filenames = list(args)
         elif len(args) >= 2:
             (pattern, filenames) = (args[0], list(args[1:]))
     if len(list(filter(lambda fname: fname == "-", filenames))) > 1:
         raise click.BadArgumentUsage(
-            'Standard input ("-") cannot be specified multipled times'
+            'Standard input ("-") cannot be specified multiple times'
         )
 
     caseness = Caseness.from_cli(case_sensitive, ignore_case, smart_case)
@@ -393,7 +394,7 @@ def cli(
         loaded_name = filename  # name of the file actually loaded by Beancount
         try:
             if filename == "-":
-                # Beancount does not support streaming reading, so to mimic Unix filter
+                # Beancount does not support streaming input, so to mimic Unix filter
                 # semantics we read stdin to the end and store it to a temporary file.
                 with NamedTemporaryFile(
                     prefix="beangrep.", suffix=".beancount"
